@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Component, type ChangeEvent, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
+import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
@@ -4933,21 +4934,6 @@ function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
 }
 
 // ── KanbanBoard ───────────────────────────────────────────────────────────────
-const PROD_CLR='#f43f5e';
-const KANBAN_COLS=[
-  {id:'backlog', label:'Backlog',      icon:'📋', color:'#64748b'},
-  {id:'todo',    label:'A Fazer',      icon:'📝', color:'#f59e0b'},
-  {id:'doing',   label:'Em Andamento', icon:'⚡', color:'#3b82f6'},
-  {id:'review',  label:'Em Revisão',   icon:'🔍', color:'#a855f7'},
-  {id:'done',    label:'Concluído',    icon:'✅', color:'#34d399'},
-];
-const TASK_PRIO={
-  low:   {label:'Baixa',  icon:'↓', color:'#34d399', bg:'#34d39918'},
-  medium:{label:'Média',  icon:'→', color:'#f59e0b', bg:'#f59e0b18'},
-  high:  {label:'Alta',   icon:'↑', color:'#f43f5e', bg:'#f43f5e18'},
-};
-const TASK_CATS=['Design','Arte','Programação','Áudio','Narrativa','UI/UX','QA','Teste','Outro'];
-
 function KanbanBoard({project,pData,setPData,onBack}){
   const getTasks=()=>pData?.[project.id]?.production?.tasks||[];
   const setTasks=updater=>{
