@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, Component, type ChangeEvent, 
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
 import { FB_DEFS, FB_PORTS } from "./features/flowBuilder/flowBuilderConstants";
+import { getSuggestions } from "./features/guides/documentSuggestions";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
@@ -6254,18 +6255,6 @@ function GDDHubInner(){
       <div style={{color:'var(--gdd-muted)',fontSize:14}}>Redirecionando…</div>
     </div>
   );
-}
-
-function getSuggestions(moduleId,project,docTitle){
-  const n=project.name,t=docTitle;
-  const map={
-    mechanics:    ['Explique detalhadamente como funciona "'+t+'"','Quais edge cases "'+t+'" precisa prever?','Como "'+t+'" se equilibra com o resto do jogo de '+n+'?'],
-    characters:   ['Desenvolva a ficha completa de "'+t+'"','Qual é o arco de transformação de "'+t+'"?','Crie as motivações e medos de "'+t+'"'],
-    worldbuilding:['Expanda a história e as facções de "'+t+'"','Que conflitos políticos moldam "'+t+'"?','Como "'+t+'" conecta ao conflito central do '+n+'?'],
-    leveldesign:  ['Projete o layout e desafios de "'+t+'"','Quais mecânicas "'+t+'" deve explorar?','Como guiar o jogador por "'+t+'" organicamente?'],
-    flowcharts:   ['Mapeie o fluxo completo de "'+t+'"','Quais são os nós de decisão em "'+t+'"?','Crie os estados e transições de "'+t+'"'],
-  };
-  return map[moduleId]||['Desenvolva "'+t+'"','Expanda as ideias de "'+t+'"','Conecte "'+t+'" ao restante do projeto'];
 }
 
 export default function GDDHub(){
