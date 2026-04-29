@@ -3,6 +3,7 @@ import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shar
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
 import { FB_DEFS, FB_PORTS } from "./features/flowBuilder/flowBuilderConstants";
 import { getSuggestions } from "./features/guides/documentSuggestions";
+import { AESTHETICS as MDA_AESTHETICS, CLR as MDA_CLR, GUIDE as MDA_GUIDE, STEPS as MDA_STEPS } from "./features/guides/mda/mdaConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
@@ -1029,28 +1030,6 @@ ${charImgUpload?`<hr><h2>🖼️ Imagem do Personagem</h2><figure style="margin:
 
 // ── MDAGuide ──────────────────────────────────────────────────────────────────
 function MDAGuide({project,pData,setPData,onBack,onDocCreated}){
-  const CLR='#fbbf24';
-  const AESTHETICS=[
-    {id:'sensation',icon:'✨',label:'Sensation',desc:'Prazer sensorial — sons, visuais, feedback tátil'},
-    {id:'fantasy',icon:'🐉',label:'Fantasy',desc:'Faz-de-conta — imersão e roleplay'},
-    {id:'narrative',icon:'📖',label:'Narrative',desc:'Drama — história e progressão emocional'},
-    {id:'challenge',icon:'⚡',label:'Challenge',desc:'Obstáculos — superação e maestria'},
-    {id:'fellowship',icon:'🤝',label:'Fellowship',desc:'Social — cooperação e competição entre jogadores'},
-    {id:'discovery',icon:'🔭',label:'Discovery',desc:'Exploração — encontrar o desconhecido'},
-    {id:'expression',icon:'🎨',label:'Expression',desc:'Autodescoberta — criatividade e identidade'},
-    {id:'submission',icon:'😌',label:'Submission',desc:'Passatempo — relaxamento e flow'},
-  ];
-  const STEPS=[
-    {id:'aesthetics',label:'Estética',icon:'🎭',hint:'A perspectiva do jogador: que emoção o jogo deve evocar?'},
-    {id:'dynamics',label:'Dinâmica',icon:'⚡',hint:'Os comportamentos que emergem durante o jogo em tempo real.'},
-    {id:'mechanics',label:'Mecânica',icon:'⚙️',hint:'As regras, ações e controles que o designer escreve no código.'},
-    {id:'compile',label:'Compilar',icon:'📄',hint:'Revise o documento e salve no módulo de Mecânicas.'},
-  ];
-  const GUIDE=[
-    {title:'O que é Estética no MDA?',body:'Estética descreve as respostas emocionais desejadas no jogador. No MDA, partimos da estética para chegar à mecânica — o designer deve primeiro entender que experiência quer criar.\n\nO vocabulário proposto inclui 8 tipos de diversão. Um jogo pode ter múltiplos tipos, em proporções distintas. Por exemplo: Charades enfatiza Fellowship e Expression; Quake prioriza Challenge e Sensation; Final Fantasy combina Fantasy, Narrative, Discovery e Expression.\n\nEscolha os tipos que melhor descrevem a experiência-alvo e explique como eles se combinam no seu jogo.'},
-    {title:'O que são Dinâmicas no MDA?',body:'Dinâmicas são comportamentos que emergem das mecânicas quando o jogador interage com o sistema em tempo real. Elas não estão escritas nas regras — surgem da interação.\n\nExemplos: em jogos de tiro, "camping" e "sniping" são dinâmicas que emergem das mecânicas de spawn e armas. Em Monopoly, a dinâmica de "rich get richer" emerge das regras de aluguel.\n\nDescreva os sistemas de feedback e tensão: como o jogo recompensa, pune e cria arcos dramáticos? Como as dinâmicas suportam as estéticas escolhidas?'},
-    {title:'O que são Mecânicas no MDA?',body:'Mecânicas são as ações, comportamentos e controles disponíveis ao jogador — o que o designer literalmente programa. São a camada mais concreta do MDA.\n\nExemplos: em card games, as mecânicas de shuffle, trick-taking e betting geram a dinâmica de bluffing. No golf, balls, clubs e hazards geram a dinâmica de "broken clubs".\n\nDescreva as regras principais, os controles do jogador e como você planeja o tuning/balanceamento para garantir que as dinâmicas e estéticas pretendidas se realizem.'},
-  ];
   const AI_HINTS=[
     ['Quais estéticas jogos do mesmo gênero costumam usar?','Como combinar Challenge com Fellowship de forma eficaz?','Que emoção um jogo de '+project.genre+' deve priorizar?'],
     ['Como criar tensão dramática nas dinâmicas deste jogo?','Que sistemas de feedback funcionam bem para '+project.genre+'?','Como as dinâmicas devem suportar a estética escolhida?'],
@@ -1076,7 +1055,7 @@ function MDAGuide({project,pData,setPData,onBack,onDocCreated}){
   const toggleAes=id=>setSelAes(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
   const getCtx=()=>{
-    const aesLabels=selAes.map(id=>AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean).join(', ');
+    const aesLabels=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean).join(', ');
     const steps=['ESTÉTICA','DINÂMICA','MECÂNICA'];
     return `Você é um especialista em Game Design guiando o usuário pelo framework MDA (Mechanics, Dynamics, Aesthetics) de Hunicke, LeBlanc e Zubek.
 Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
@@ -1102,8 +1081,8 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
   };
 
   const compileHtml=()=>{
-    const aesLabels=selAes.map(id=>AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean);
-    const aesIcons=selAes.map(id=>AESTHETICS.find(a=>a.id===id)).filter(Boolean).map(a=>a.icon+' '+a.label).join(' · ');
+    const aesLabels=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean);
+    const aesIcons=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)).filter(Boolean).map(a=>a.icon+' '+a.label).join(' · ');
     return `<h2>📐 MDA Framework — ${docTitle}</h2><p><em>Documento estruturado com o framework MDA (Hunicke, LeBlanc, Zubek)</em></p><hr><h2>🎭 Estética</h2><p><strong>Tipos de diversão selecionados:</strong> ${aesIcons||'—'}</p>${aesDesc?`<h3>Experiência do Jogador</h3><p>${aesDesc}</p>`:''} ${aesModel?`<h3>Modelo Estético</h3><p>${aesModel}</p>`:''}<hr><h2>⚡ Dinâmica</h2>${dynDesc?`<h3>Comportamentos Emergentes</h3><p>${dynDesc}</p>`:''} ${dynFeed?`<h3>Sistemas de Feedback</h3><p>${dynFeed}</p>`:''}<hr><h2>⚙️ Mecânica</h2>${mecRules?`<h3>Regras e Ações</h3><p>${mecRules}</p>`:''} ${mecTuning?`<h3>Tuning e Balanceamento</h3><p>${mecTuning}</p>`:''}`;
   };
 
@@ -1116,7 +1095,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
 
   const canNext=[selAes.length>0,dynDesc.trim().length>0,mecRules.trim().length>0];
   const currMsgs=step<3?aiMsgs[step]:[];
-  const stepGuide=step<3?GUIDE[step]:null;
+  const stepGuide=step<3?MDA_GUIDE[step]:null;
 
 
   return(
@@ -1124,7 +1103,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
       {/* Header */}
       <div style={{height:54,borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',alignItems:'center',padding:'0 16px',gap:10,flexShrink:0,background:'var(--gdd-bg)'}}>
         <button style={S.back} onClick={onBack}>← Mecânicas</button>
-        <span style={{color:CLR,fontWeight:700,fontSize:15}}>📐 MDA Framework</span>
+        <span style={{color:MDA_CLR,fontWeight:700,fontSize:15}}>📐 MDA Framework</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
         <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
@@ -1132,9 +1111,9 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
 
       {/* Stepper */}
       <div style={{borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',alignItems:'stretch',background:'var(--gdd-bg0)',flexShrink:0,height:42}}>
-        {STEPS.map((s,i)=>(
+        {MDA_STEPS.map((s,i)=>(
           <button key={s.id} onClick={()=>setStep(i)}
-            style={{display:'flex',alignItems:'center',gap:6,padding:'0 18px',background:'none',border:'none',borderBottom:step===i?'2px solid '+CLR:'2px solid transparent',cursor:'pointer',color:step===i?CLR:i<step?'var(--gdd-muted)':'#334155',fontWeight:step===i?700:400,fontSize:12,whiteSpace:'nowrap',position:'relative'}}>
+            style={{display:'flex',alignItems:'center',gap:6,padding:'0 18px',background:'none',border:'none',borderBottom:step===i?'2px solid '+MDA_CLR:'2px solid transparent',cursor:'pointer',color:step===i?MDA_CLR:i<step?'var(--gdd-muted)':'#334155',fontWeight:step===i?700:400,fontSize:12,whiteSpace:'nowrap',position:'relative'}}>
             <span style={{fontSize:13}}>{s.icon}</span>
             <span>{s.label}</span>
             {i<step&&<span style={{fontSize:9,color:'#34d399',fontWeight:900}}>✓</span>}
@@ -1144,11 +1123,11 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
         <div style={{flex:1}}/>
         {step<3&&<div style={{display:'flex',alignItems:'center',padding:'0 16px',gap:8}}>
           {step>0&&<button style={S.btn('var(--gdd-border)','var(--gdd-muted)',{padding:'5px 14px',fontSize:12})} onClick={()=>setStep(s=>s-1)}>← Anterior</button>}
-          <button style={S.btn(canNext[step]?CLR:'var(--gdd-border)','#000',{padding:'5px 14px',fontSize:12,opacity:canNext[step]?1:.5})} disabled={!canNext[step]} onClick={()=>setStep(s=>s+1)}>Próximo →</button>
+          <button style={S.btn(canNext[step]?MDA_CLR:'var(--gdd-border)','#000',{padding:'5px 14px',fontSize:12,opacity:canNext[step]?1:.5})} disabled={!canNext[step]} onClick={()=>setStep(s=>s+1)}>Próximo →</button>
         </div>}
         {step===3&&<div style={{display:'flex',alignItems:'center',padding:'0 16px',gap:8}}>
           <button style={S.btn('var(--gdd-border)','var(--gdd-muted)',{padding:'5px 14px',fontSize:12})} onClick={()=>setStep(2)}>← Voltar</button>
-          <button style={S.btn(CLR,'#000',{padding:'5px 18px',fontSize:13,fontWeight:800})} onClick={saveDoc}>💾 Salvar documento</button>
+          <button style={S.btn(MDA_CLR,'#000',{padding:'5px 18px',fontSize:13,fontWeight:800})} onClick={saveDoc}>💾 Salvar documento</button>
         </div>}
       </div>
 
@@ -1160,12 +1139,12 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
           {step<3&&stepGuide&&(
             <>
               <div style={{padding:'14px 16px',borderBottom:'1px solid '+'var(--gdd-border2)',flexShrink:0}}>
-                <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,marginBottom:6,textTransform:'uppercase'}}>📚 Guia MDA — {STEPS[step].label}</div>
+                <div style={{fontSize:10,fontWeight:700,color:MDA_CLR,letterSpacing:1.5,marginBottom:6,textTransform:'uppercase'}}>📚 Guia MDA — {MDA_STEPS[step].label}</div>
                 <div style={{fontWeight:700,fontSize:13,color:'var(--gdd-text)',marginBottom:8}}>{stepGuide.title}</div>
                 <div style={{color:'var(--gdd-dim)',fontSize:12,lineHeight:1.75,whiteSpace:'pre-wrap'}}>{stepGuide.body}</div>
               </div>
               <div style={{padding:'8px 16px',borderBottom:'1px solid '+'var(--gdd-border2)',background:'var(--gdd-bg)',flexShrink:0,display:'flex',alignItems:'center',gap:6}}>
-                <span style={{color:CLR,fontSize:11}}>✦</span>
+                <span style={{color:MDA_CLR,fontSize:11}}>✦</span>
                 <span style={{fontWeight:700,fontSize:12,color:'var(--gdd-muted)'}}>IA de Game Design</span>
               </div>
               <div style={{flex:1,overflowY:'auto',padding:'12px',display:'flex',flexDirection:'column',gap:10}}>
@@ -1173,32 +1152,32 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
                   <div style={{display:'flex',flexDirection:'column',gap:5,paddingTop:4}}>
                     <div style={{color:'#334155',fontSize:11,marginBottom:4}}>Sugestões para esta etapa:</div>
                     {AI_HINTS[step].map((h,i)=>(
-                      <button key={i} onClick={()=>sendAi(h)} style={{background:'var(--gdd-bg2)',border:'1px solid '+CLR+'22',color:'var(--gdd-dim)',borderRadius:7,padding:'7px 10px',cursor:'pointer',fontSize:11,textAlign:'left',lineHeight:1.5}}>{h}</button>
+                      <button key={i} onClick={()=>sendAi(h)} style={{background:'var(--gdd-bg2)',border:'1px solid '+MDA_CLR+'22',color:'var(--gdd-dim)',borderRadius:7,padding:'7px 10px',cursor:'pointer',fontSize:11,textAlign:'left',lineHeight:1.5}}>{h}</button>
                     ))}
                   </div>
                 )}
                 {currMsgs.map((m,i)=>(
                   <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
-                    <div style={{background:m.role==='user'?'#1a1a30':'#0d1414',border:'1px solid '+(m.role==='user'?'#4c1d9555':CLR+'25'),borderRadius:10,padding:'8px 11px',maxWidth:'94%',fontSize:11,lineHeight:1.65,whiteSpace:'pre-wrap'}}>
-                      {m.role==='assistant'&&<div style={{color:CLR,fontSize:9,fontWeight:700,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>📐 MDA</div>}
+                    <div style={{background:m.role==='user'?'#1a1a30':'#0d1414',border:'1px solid '+(m.role==='user'?'#4c1d9555':MDA_CLR+'25'),borderRadius:10,padding:'8px 11px',maxWidth:'94%',fontSize:11,lineHeight:1.65,whiteSpace:'pre-wrap'}}>
+                      {m.role==='assistant'&&<div style={{color:MDA_CLR,fontSize:9,fontWeight:700,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>📐 MDA</div>}
                       {m.content}
                     </div>
                   </div>
                 ))}
-                {aiLoad&&<div style={{background:'#0d1414',border:'1px solid '+CLR+'25',borderRadius:10,padding:'8px 11px',fontSize:11,color:'#334155',alignSelf:'flex-start'}}>Pensando…</div>}
+                {aiLoad&&<div style={{background:'#0d1414',border:'1px solid '+MDA_CLR+'25',borderRadius:10,padding:'8px 11px',fontSize:11,color:'#334155',alignSelf:'flex-start'}}>Pensando…</div>}
                 <div ref={chatEndRef}/>
               </div>
               <div style={{padding:'8px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-                <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+STEPS[step].label.toLowerCase()+'...'} style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
-                <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
+                <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+MDA_STEPS[step].label.toLowerCase()+'...'} style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+                <button style={S.btn(aiLoad?'var(--gdd-border)':MDA_CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
               </div>
             </>
           )}
           {step===3&&(
             <div style={{flex:1,overflowY:'auto',padding:'22px 20px'}}>
-              <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,marginBottom:14,textTransform:'uppercase'}}>📄 Resumo do documento</div>
+              <div style={{fontSize:10,fontWeight:700,color:MDA_CLR,letterSpacing:1.5,marginBottom:14,textTransform:'uppercase'}}>📄 Resumo do documento</div>
               {[
-                {label:'Estéticas',value:selAes.map(id=>AESTHETICS.find(a=>a.id===id)).filter(Boolean).map(a=>a.icon+' '+a.label).join(', ')||'—'},
+                {label:'Estéticas',value:selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)).filter(Boolean).map(a=>a.icon+' '+a.label).join(', ')||'—'},
                 {label:'Experiência do jogador',value:aesDesc||'—'},
                 {label:'Modelo estético',value:aesModel||'—'},
                 {label:'Dinâmicas',value:dynDesc||'—'},
@@ -1207,7 +1186,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
                 {label:'Tuning',value:mecTuning||'—'},
               ].map(({label,value})=>(
                 <div key={label} style={{marginBottom:14}}>
-                  <div style={{fontSize:10,color:CLR,fontWeight:700,letterSpacing:.5,marginBottom:4,textTransform:'uppercase'}}>{label}</div>
+                  <div style={{fontSize:10,color:MDA_CLR,fontWeight:700,letterSpacing:.5,marginBottom:4,textTransform:'uppercase'}}>{label}</div>
                   <div style={{fontSize:12,color:'var(--gdd-muted)',lineHeight:1.65,background:'var(--gdd-bg2)',borderRadius:6,padding:'8px 10px',border:'1px solid '+'var(--gdd-border2)'}}>{value}</div>
                 </div>
               ))}
@@ -1221,14 +1200,14 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
           {step===0&&(
             <>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:10,textTransform:'uppercase'}}>1 — Selecione os tipos de diversão <span style={{color:'#ef4444'}}>*</span></div>
+              <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:10,textTransform:'uppercase'}}>1 — Selecione os tipos de diversão <span style={{color:'#ef4444'}}>*</span></div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:8}}>
-                  {AESTHETICS.map(a=>{const sel=selAes.includes(a.id);return(
-                    <div key={a.id} onClick={()=>toggleAes(a.id)} style={{background:sel?CLR+'18':'var(--gdd-bg2)',border:'1px solid '+(sel?CLR:'var(--gdd-border2)'),borderRadius:10,padding:'10px 12px',cursor:'pointer',transition:'all .15s'}}>
+                  {MDA_AESTHETICS.map(a=>{const sel=selAes.includes(a.id);return(
+                    <div key={a.id} onClick={()=>toggleAes(a.id)} style={{background:sel?MDA_CLR+'18':'var(--gdd-bg2)',border:'1px solid '+(sel?MDA_CLR:'var(--gdd-border2)'),borderRadius:10,padding:'10px 12px',cursor:'pointer',transition:'all .15s'}}>
                       <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:4}}>
                         <span style={{fontSize:16}}>{a.icon}</span>
-                        <span style={{fontWeight:700,fontSize:12,color:sel?CLR:'var(--gdd-muted)'}}>{a.label}</span>
-                        {sel&&<span style={{marginLeft:'auto',color:CLR,fontSize:11,fontWeight:900}}>✓</span>}
+                        <span style={{fontWeight:700,fontSize:12,color:sel?MDA_CLR:'var(--gdd-muted)'}}>{a.label}</span>
+                        {sel&&<span style={{marginLeft:'auto',color:MDA_CLR,fontSize:11,fontWeight:900}}>✓</span>}
                       </div>
                       <div style={{fontSize:11,color:'var(--gdd-muted)',lineHeight:1.45}}>{a.desc}</div>
                     </div>
@@ -1237,11 +1216,11 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
                 {selAes.length===0&&<div style={{fontSize:11,color:'#334155',marginTop:6}}>Selecione pelo menos uma estética para continuar.</div>}
               </div>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Descreva a experiência do jogador</div>
+                <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Descreva a experiência do jogador</div>
                 <TA value={aesDesc} onChange={setAesDesc} placeholder={'Como o jogador deve se sentir ao jogar '+project.name+'? Descreva emoções, momentos-chave e a progressão da experiência...'} rows={4}/>
               </div>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>3 — Modelo estético (opcional)</div>
+                <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>3 — Modelo estético (opcional)</div>
                 <TA value={aesModel} onChange={setAesModel} placeholder={'Como os tipos de diversão se combinam? Ex: "Challenge é primário, Fellowship emerge no multiplayer, Discovery aparece na exploração do mapa..."'} rows={3}/>
               </div>
             </>
@@ -1250,15 +1229,15 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
           {step===1&&(
             <>
               <div style={{background:'#fbbf2408',border:'1px solid #fbbf2420',borderRadius:10,padding:'12px 14px',fontSize:12,color:'var(--gdd-muted)',lineHeight:1.65}}>
-                <strong style={{color:CLR}}>Contexto: </strong>
-                Estéticas escolhidas — {selAes.map(id=>AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean).join(', ')||'—'}
+                <strong style={{color:MDA_CLR}}>Contexto: </strong>
+                Estéticas escolhidas — {selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean).join(', ')||'—'}
               </div>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>1 — Comportamentos emergentes <span style={{color:'#ef4444'}}>*</span></div>
+                <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>1 — Comportamentos emergentes <span style={{color:'#ef4444'}}>*</span></div>
                 <TA value={dynDesc} onChange={setDynDesc} placeholder={'Quais dinâmicas emergem espontaneamente das mecânicas? Como elas criam as estéticas desejadas? Ex: "a escassez de recursos cria tensão e senso de Challenge; jogadores competem naturalmente criando Fellowship adversarial..."'} rows={5}/>
               </div>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Sistemas de feedback e tensão</div>
+                <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Sistemas de feedback e tensão</div>
                 <TA value={dynFeed} onChange={setDynFeed} placeholder={'Como o jogo dá feedback ao jogador? Há loops de positive/negative feedback? Como a tensão é criada e resolvida? Ex: "rich get richer loop com válvulas de escape para jogadores atrás..."'} rows={4}/>
               </div>
             </>
@@ -1267,15 +1246,15 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
           {step===2&&(
             <>
               <div style={{background:'#fbbf2408',border:'1px solid #fbbf2420',borderRadius:10,padding:'12px 14px',fontSize:12,color:'var(--gdd-muted)',lineHeight:1.65}}>
-                <strong style={{color:CLR}}>Dinâmicas a implementar — </strong>
+                <strong style={{color:MDA_CLR}}>Dinâmicas a implementar — </strong>
                 {dynDesc.slice(0,120)}{dynDesc.length>120?'...':''}
               </div>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>1 — Regras e ações do jogador <span style={{color:'#ef4444'}}>*</span></div>
+                <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>1 — Regras e ações do jogador <span style={{color:'#ef4444'}}>*</span></div>
                 <TA value={mecRules} onChange={setMecRules} placeholder={'Quais são as mecânicas concretas? Liste ações, controles, regras e sistemas. Ex: "o jogador pode coletar, craftar e equipar. Cada recurso tem peso que limita o inventário. Morte permanente remove inventário..."'} rows={5}/>
               </div>
               <div>
-                <div style={{fontSize:11,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Tuning e balanceamento</div>
+                <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Tuning e balanceamento</div>
                 <TA value={mecTuning} onChange={setMecTuning} placeholder={'Como você vai iterar e balancear? Que variáveis são ajustáveis? Ex: "taxa de spawn, valores de dano e cura, probabilidades de drop — todos configuráveis para tuning de dificuldade..."'} rows={3}/>
               </div>
             </>
@@ -1284,7 +1263,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
           {step===3&&(
             <div style={{display:'flex',flexDirection:'column',gap:16,alignItems:'center',justifyContent:'center',flex:1,textAlign:'center',padding:'20px 0'}}>
               <div style={{fontSize:52,marginBottom:4}}>📐</div>
-              <div style={{fontWeight:800,fontSize:20,color:CLR}}>Documento MDA pronto!</div>
+              <div style={{fontWeight:800,fontSize:20,color:MDA_CLR}}>Documento MDA pronto!</div>
               <div style={{color:'var(--gdd-dim)',fontSize:13,maxWidth:420,lineHeight:1.7}}>O documento será salvo no módulo de Mecânicas com toda a estrutura MDA organizada. Você poderá continuar editando com o editor completo e a IA.</div>
               <div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border2)',borderRadius:12,padding:'14px 20px',width:'100%',maxWidth:400,textAlign:'left',marginTop:8}}>
                 <div style={{fontSize:12,color:'var(--gdd-muted)',marginBottom:10}}>O documento conterá:</div>
