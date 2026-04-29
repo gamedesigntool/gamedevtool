@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Component } from "react";
+import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
+import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
+import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 
 // ── Fallback global para erros antes do React montar ─────────────────────────
 if(typeof window !== 'undefined'){
@@ -13,145 +16,6 @@ if(typeof window !== 'undefined'){
   setTimeout(()=>{ window.__gdt_loaded = true; }, 5000);
 }
 
-// ── TRANSLATIONS ──────────────────────────────────────────────────────────────
-const TR = {
-  pt:{
-    nav1:'O que é',nav2:'Como funciona',nav3:'Módulos',nav4:'Para quem',navBtn:'Meus Projetos →',
-    hero_badge:'✦ CO-CRIAÇÃO COM INTELIGÊNCIA ARTIFICIAL',
-    hero_h:'Construa jogos',hero_hl:'extraordinários',hero_hc:'com IA ao seu lado',
-    hero_sub:'O Game Design Tool é a plataforma onde Game Designers criam, organizam e documentam seus universos em co-autoria com IA — do primeiro conceito ao GDD exportado.',
-    hero_cta:'Começar agora — é grátis',hero_cta2:'Ver como funciona',
-    how_tag:'COMO FUNCIONA',how_h:'Do conceito ao GDD exportado',
-    how_steps:[
-      {n:'01',icon:'🗂️',color:'#a855f7',title:'Crie seu projeto',text:'Nome, gênero e plataforma. Cada projeto é um universo isolado.'},
-      {n:'02',icon:'💡',color:'#fb923c',title:'Brainstorming & Benchmarking',text:'Canvas visual livre com post-its e IA de referências de jogos.'},
-      {n:'03',icon:'🧩',color:'#22d3ee',title:'Crie documentos',text:'Cada módulo tem documentos com editor e chat próprios.'},
-      {n:'04',icon:'📥',color:'#34d399',title:'Exporte em PDF',text:'Selecione módulos e docs, gere um PDF profissional com capa e sumário.'},
-    ],
-    mods_tag:'MÓDULOS',mods_h:'8 módulos especializados',
-    fw_tag:'PARA QUEM É',fw_h:'Feito para quem cria jogos',
-    fw_items:[
-      {icon:'🎮',title:'Game Designers',text:'Do indie solo ao estúdio — o Game Design Tool é o seu espaço de criação.'},
-      {icon:'✍️',title:'Escritores',text:'Narrative designers que precisam de consistência no worldbuilding.'},
-      {icon:'🧑‍🎓',title:'Estudantes',text:'Aprenda a estruturar ideias e produza documentação profissional.'},
-      {icon:'🏢',title:'Times de Dev',text:'Mantenha todos na mesma página com documentação centralizada.'},
-    ],
-    cta_h:'Pronto para criar seu próximo jogo?',cta_s:'Comece agora. É grátis.',cta_btn:'Entrar no Game Design Tool →',
-    dash_h:'Meus Projetos',dash_new:'+ Novo Projeto',dash_genre:'Gênero',dash_plat:'Plataforma',
-    dash_prog:'Progresso geral',dash_open:'Abrir',dash_clone:'Clonar',dash_del:'Excluir',
-    dash_empty:'Nenhum projeto ainda.',dash_empty2:'Crie seu primeiro projeto para começar!',
-    np_h:'Novo Projeto',np_name:'Nome do projeto',np_genre:'Gênero (ex: RPG, Plataforma…)',
-    np_plat:'Plataforma (ex: PC, Mobile…)',np_create:'Criar Projeto',cancel:'Cancelar',
-    mod_back:'← Projetos',mod_newdoc:'+ Novo Documento',mod_empty:'Nenhum documento ainda.',
-    mod_empty2:'Crie seu primeiro documento neste módulo.',mod_upd:'Atualizado',mod_cre:'Criado',
-    save:'Salvar',saved:'Salvo ✓',export_pdf:'📥 Gerar PDF',doc_back:'← Módulo',
-    send:'Enviar',thinking:'Pensando…',ai_ph:'Peça ajuda ao assistente de IA…',
-    rename:'Renomear',del_doc:'Excluir',
-    st_progress:'Em andamento',st_done:'Concluído',
-    conf_del:'Excluir projeto',conf_clone:'Clonar projeto',
-    conf_del_m:'Todos os dados de',conf_del_m2:'serão perdidos.',
-    conf_clone_m:'Uma cópia será criada com todos os dados.',
-    del_btn:'Excluir',clone_btn:'Clonar',
-    exp_h:'Exportar GDD',exp_pdf:'PDF',exp_all:'Todos',exp_none:'Nenhum',exp_close:'Fechar',
-    nd_h:'Novo Documento',nd_ph:'Título do documento…',nd_create:'Criar',
-    ch_blank:'📄 Documento em branco',ch_blank_d:'Editor livre com assistência de IA',
-    flow_new:'Novo Fluxo',
-    creator_tag:'O CRIADOR',
-    creator_h:'Feito com ❤️ por Victor Hugo Costa',
-    creator_p:'Game designer, entusiasta de IA e um eterno aprendiz da comunidade de desenvolvimento de jogos. A Game Design Tool nasceu da vontade de reunir tudo que um game designer precisa para construir universos incríveis - em um só lugar, acessível para todos.',
-    creator_contact:'Entre em contato',
-  },
-  en:{
-    nav1:'What is it',nav2:'How it works',nav3:'Modules',nav4:"Who it's for",navBtn:'My Projects →',
-    hero_badge:'✦ CO-CREATION WITH ARTIFICIAL INTELLIGENCE',
-    hero_h:'Build',hero_hl:'extraordinary',hero_hc:'games with AI by your side',
-    hero_sub:'Game Design Tool is the platform where Game Designers create, organize and document their universes in AI co-authorship — from first concept to exported GDD.',
-    hero_cta:"Start now — it's free",hero_cta2:'See how it works',
-    how_tag:'HOW IT WORKS',how_h:'From concept to exported GDD',
-    how_steps:[
-      {n:'01',icon:'🗂️',color:'#a855f7',title:'Create your project',text:'Name, genre and platform. Each project is an isolated universe.'},
-      {n:'02',icon:'💡',color:'#fb923c',title:'Brainstorming & Benchmarking',text:'Free visual canvas with sticky notes and AI game references.'},
-      {n:'03',icon:'🧩',color:'#22d3ee',title:'Create documents',text:'Each module has documents with their own editor and chat.'},
-      {n:'04',icon:'📥',color:'#34d399',title:'Export as PDF',text:'Select modules and docs, generate a professional PDF with cover and index.'},
-    ],
-    mods_tag:'MODULES',mods_h:'8 specialized modules',
-    fw_tag:"WHO IT'S FOR",fw_h:'Built for game creators',
-    fw_items:[
-      {icon:'🎮',title:'Game Designers',text:'From solo indie to studio — Game Design Tool is your creative space.'},
-      {icon:'✍️',title:'Writers',text:'Narrative designers who need consistency in worldbuilding.'},
-      {icon:'🧑‍🎓',title:'Students',text:'Learn to structure ideas and produce professional documentation.'},
-      {icon:'🏢',title:'Dev Teams',text:'Keep everyone on the same page with centralized documentation.'},
-    ],
-    cta_h:'Ready to build your next game?',cta_s:"Start now. It's free.",cta_btn:'Enter Game Design Tool →',
-    dash_h:'My Projects',dash_new:'+ New Project',dash_genre:'Genre',dash_plat:'Platform',
-    dash_prog:'Overall progress',dash_open:'Open',dash_clone:'Clone',dash_del:'Delete',
-    dash_empty:'No projects yet.',dash_empty2:'Create your first project to get started!',
-    np_h:'New Project',np_name:'Project name',np_genre:'Genre (e.g. RPG, Platformer…)',
-    np_plat:'Platform (e.g. PC, Mobile…)',np_create:'Create Project',cancel:'Cancel',
-    mod_back:'← Projects',mod_newdoc:'+ New Document',mod_empty:'No documents yet.',
-    mod_empty2:'Create your first document in this module.',mod_upd:'Updated',mod_cre:'Created',
-    save:'Save',saved:'Saved ✓',export_pdf:'📥 Export PDF',doc_back:'← Module',
-    send:'Send',thinking:'Thinking…',ai_ph:'Ask the AI assistant…',
-    rename:'Rename',del_doc:'Delete',
-    st_progress:'In progress',st_done:'Completed',
-    conf_del:'Delete project',conf_clone:'Clone project',
-    conf_del_m:'All data from',conf_del_m2:'will be lost.',
-    conf_clone_m:'A copy will be created with all data.',
-    del_btn:'Delete',clone_btn:'Clone',
-    exp_h:'Export GDD',exp_pdf:'PDF',exp_all:'All',exp_none:'None',exp_close:'Close',
-    nd_h:'New Document',nd_ph:'Document title…',nd_create:'Create',
-    ch_blank:'📄 Blank Document',ch_blank_d:'Free editor with AI assistance',
-    flow_new:'New Flow',
-    creator_tag:'THE CREATOR',
-    creator_h:'Made with ❤️ by Victor Hugo Costa',
-    creator_p:'Game designer, AI enthusiast and an eternal learner from the game development community. Game Design Tool was born from the desire to bring everything a game designer needs to build incredible universes — all in one place, accessible to everyone.',
-    creator_contact:'Get in touch',
-  },
-};
-
-const MODULES_I18N = {
-  pt:[
-    {id:'brainstorming',icon:'💡',label:'Brainstorming & Benchmarking',color:'#fb923c',desc:'Canvas livre para ideias visuais, post-its e benchmarking de jogos com IA.'},
-    {id:'production',icon:'🏭',label:'Produção',color:'#f43f5e',desc:'Gerencie o desenvolvimento com um quadro Kanban visual — tarefas, prioridades e progresso da equipe.'},
-    {id:'mechanics',icon:'⚙️',label:'Mecânicas',color:'#fbbf24',desc:'Sistemas, regras e game loops. Crie documentos em branco ou guiados por frameworks como MDA.'},
-    {id:'characters',icon:'🧙',label:'Personagens',color:'#a855f7',desc:'Fichas completas, backstories e arcos narrativos.'},
-    {id:'worldbuilding',icon:'🌍',label:'Worldbuilding',color:'#22d3ee',desc:'Lore, mapas, fações e história do mundo.'},
-    {id:'narrative',icon:'📖',label:'Narrativa',color:'#e879f9',desc:'Design narrativo, harmonia ludonarrativa e construção de experiências de história.'},
-    {id:'leveldesign',icon:'🗺️',label:'Level Design',color:'#34d399',desc:'Fases, ambientes e progressão de gameplay.'},
-    {id:'flowcharts',icon:'🔀',label:'Fluxogramas',color:'#f472b6',desc:'Construa fluxos visuais de gameplay, narrativa e decisão com formas e conexões.'},
-  ],
-  en:[
-    {id:'brainstorming',icon:'💡',label:'Brainstorming & Benchmarking',color:'#fb923c',desc:'Free canvas for visual ideas, sticky notes and game benchmarking with AI.'},
-    {id:'production',icon:'🏭',label:'Production',color:'#f43f5e',desc:'Manage development with a visual Kanban board — tasks, priorities and team progress.'},
-    {id:'mechanics',icon:'⚙️',label:'Mechanics',color:'#fbbf24',desc:'Systems, rules and game loops. Create blank docs or guided by frameworks like MDA.'},
-    {id:'characters',icon:'🧙',label:'Characters',color:'#a855f7',desc:'Full character sheets, backstories and narrative arcs.'},
-    {id:'worldbuilding',icon:'🌍',label:'Worldbuilding',color:'#22d3ee',desc:'Lore, maps, factions and world history.'},
-    {id:'narrative',icon:'📖',label:'Narrative',color:'#e879f9',desc:'Narrative design, ludonarrative harmony and story experience building.'},
-    {id:'leveldesign',icon:'🗺️',label:'Level Design',color:'#34d399',desc:'Levels, environments and gameplay progression.'},
-    {id:'flowcharts',icon:'🔀',label:'Flowcharts',color:'#f472b6',desc:'Build visual gameplay, narrative and decision flows with shapes and connections.'},
-  ],
-};
-const MODULES = MODULES_I18N.pt; // default; overridden in GDDHub via lang
-
-
-// ── THEME PALETTES ────────────────────────────────────────────────────────────
-const THEMES = {
-  dark:{bg:'#0c0c14',bg0:'#0a0a12',bg2:'#12121e',bg3:'#16162a',border:'#2a2a40',border2:'#1c1c2e',text:'#e2e8f0',muted:'#94a3b8',dim:'#64748b',navBg:'rgba(12,12,20,.93)'},
-  light:{bg:'#f1f5f9',bg0:'#e2e8f0',bg2:'#ffffff',bg3:'#f8fafc',border:'#cbd5e1',border2:'#e2e8f0',text:'#1e293b',muted:'#475569',dim:'#64748b',navBg:'rgba(248,250,252,.95)'},
-};
-
-function ThemeToggle({theme,setTheme}){
-  return <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} title={theme==='dark'?'Light mode':'Dark mode'} style={{background:'none',border:'1px solid var(--gdd-border)',color:'var(--gdd-muted)',borderRadius:8,padding:'4px 9px',cursor:'pointer',fontSize:15,lineHeight:1,transition:'all .2s'}}>{theme==='dark'?'☀️':'🌙'}</button>;
-}
-function LangToggle({lang,setLang}){
-  return <button onClick={()=>setLang(l=>l==='pt'?'en':'pt')} title="Switch language" style={{background:'none',border:'1px solid var(--gdd-border)',color:'var(--gdd-muted)',borderRadius:8,padding:'4px 9px',cursor:'pointer',fontSize:11,fontWeight:700,letterSpacing:.5,transition:'all .2s'}}>{lang==='pt'?'EN':'PT'}</button>;
-}
-
-
-// MODULES is computed from lang at runtime — see MODULES_I18N
-const PALETTE=['#7c3aed','#06b6d4','#f59e0b','#ef4444','#10b981','#ec4899','#8b5cf6'];
-const EMOJIS =['🌌','♟️','🏃','🐉','⚔️','🚀','🌊'];
-const STATUS ={ progress:{label:'Em andamento',color:'#fbbf24',bg:'#fbbf2415'}, done:{label:'Concluído',color:'#34d399',bg:'#34d39915'} };
 // NAV_LINKS generated from t inside component
 const scrollTo=id=>document.getElementById(id)?.scrollIntoView({behavior:'smooth'});
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -651,14 +515,6 @@ function CanvasBoard({project,pData,setPData,onBack}){
         r.readAsDataURL(f);e.target.value='';
       }}/>
     </div>
-  );
-}
-
-// ── Shared TA (textarea) component — defined globally to avoid remount on every keystroke
-function TA({value,onChange,placeholder,rows=3}){
-  return(
-    <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
-      style={{...S.inp,resize:'vertical',lineHeight:1.7,fontSize:13,padding:'12px 14px'}}/>
   );
 }
 
@@ -4063,22 +3919,6 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
 
 // ── WorldbuildingGuide helpers (defined OUTSIDE to avoid remount on each render)
 const WB_CLR='#22d3ee';
-function WbTA({value,onChange,placeholder,rows=3}){
-  return(
-    <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
-      style={{background:'var(--gdd-bg)',border:'1px solid '+'var(--gdd-border)',borderRadius:8,padding:'10px 12px',color:'var(--gdd-text)',fontSize:13,resize:'vertical',outline:'none',width:'100%',boxSizing:'border-box',lineHeight:1.6,fontFamily:'system-ui,sans-serif'}}
-      onFocus={e=>e.target.style.borderColor=WB_CLR} onBlur={e=>e.target.style.borderColor='var(--gdd-border)'}/>
-  );
-}
-function WbField({label,hint,value,onChange,placeholder,rows}){
-  return(
-    <div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border2)',borderRadius:12,padding:'16px 18px'}}>
-      <div style={{fontSize:10,color:WB_CLR,fontWeight:700,letterSpacing:1,marginBottom:hint?6:8,textTransform:'uppercase'}}>{label}</div>
-      {hint&&<div style={{fontSize:11,color:'var(--gdd-muted)',lineHeight:1.6,marginBottom:8}}>{hint}</div>}
-      <WbTA value={value} onChange={onChange} placeholder={placeholder} rows={rows}/>
-    </div>
-  );
-}
 
 // ── WorldbuildingGuide ────────────────────────────────────────────────────────
 function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
@@ -4831,22 +4671,6 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}){
 
 // ── UnityLDGuide helpers (outside to avoid remount) ──────────────────────────
 const LD_CLR='#34d399';
-function LdTA({value,onChange,placeholder,rows=3}){
-  return (
-    <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
-      style={{background:'var(--gdd-bg)',border:'1px solid '+'var(--gdd-border)',borderRadius:8,padding:'10px 12px',color:'var(--gdd-text)',fontSize:13,resize:'vertical',outline:'none',width:'100%',boxSizing:'border-box',lineHeight:1.6,fontFamily:'system-ui,sans-serif'}}
-      onFocus={e=>e.target.style.borderColor=LD_CLR} onBlur={e=>e.target.style.borderColor='var(--gdd-border)'}/>
-  );
-}
-function LdField({label,hint,value,onChange,placeholder,rows}){
-  return (
-    <div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border2)',borderRadius:12,padding:'16px 18px'}}>
-      <div style={{fontSize:10,color:LD_CLR,fontWeight:700,letterSpacing:1,marginBottom:hint?6:8,textTransform:'uppercase'}}>{label}</div>
-      {hint&&<div style={{fontSize:11,color:'var(--gdd-muted)',lineHeight:1.6,marginBottom:8}}>{hint}</div>}
-      <LdTA value={value} onChange={onChange} placeholder={placeholder} rows={rows}/>
-    </div>
-  );
-}
 
 // ── UnityLDGuide ──────────────────────────────────────────────────────────────
 function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
@@ -5597,11 +5421,6 @@ class GDTErrorBoundary extends Component {
     return this.props.children;
   }
 }
-
-// ── localStorage helpers ─────────────────────────────────────────────────────
-const LS_KEYS={projects:'gdt_projects',pData:'gdt_pdata',lang:'gdt_lang',theme:'gdt_theme'};
-function lsGet(key,fallback){try{const v=localStorage.getItem(key);return v!=null?JSON.parse(v):fallback;}catch(e){return fallback;}}
-function lsSet(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('localStorage full',e);}}
 
 function GDDHubInner(){
   const [lang,setLang]=useState(()=>lsGet(LS_KEYS.lang,'pt'));
