@@ -1,7 +1,148 @@
-import { useState, useRef, useEffect, useCallback, Component } from "react";
+import { useState, useRef, useEffect, useCallback, Component, type ChangeEvent, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
+
+declare global {
+  interface Window {
+    __gdt_loaded?: boolean;
+  }
+}
+
+type ProjectId = string | number;
+type DocumentId = string;
+type StatusKey = "progress" | "done";
+type ThemeKey = keyof typeof THEMES;
+type LangKey = keyof typeof TR;
+type ViewKey =
+  | "landing"
+  | "dashboard"
+  | "project"
+  | "module"
+  | "document"
+  | "brainstorming"
+  | "production"
+  | "flow-builder"
+  | "mda-guided"
+  | "double-a-guided"
+  | "fourkeys-guided"
+  | "colors-guided"
+  | "octalysis-guided"
+  | "pens-guided"
+  | "tetrad-guided"
+  | "ludonarrative-guided"
+  | "reedsy-wb-guided"
+  | "unity-ld-guided";
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+type Project = {
+  id: ProjectId;
+  name: string;
+  genre: string;
+  platform: string;
+  color: string;
+  emoji: string;
+  progress: number;
+};
+
+type ModuleMeta = {
+  id: string;
+  icon: string;
+  label: string;
+  color: string;
+  desc: string;
+};
+
+type FlowNode = {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  w?: number;
+  h?: number;
+  label: string;
+};
+
+type FlowEdge = {
+  id: string;
+  from: string;
+  to: string;
+  fromPort?: string;
+  toPort?: string;
+  label?: string;
+};
+
+type FlowData = {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+};
+
+type FlowSelection = { type: "node" | "edge"; id: string } | null;
+type FlowDragging = { id: string; ox: number; oy: number } | null;
+type FlowConnecting = { fromId: string; fromPort: string; ax: number; ay: number; cx: number; cy: number } | null;
+type FlowPanning = { sx: number; sy: number; sp: CanvasPoint } | null;
+
+type Document = {
+  id: DocumentId;
+  title: string;
+  content: string;
+  messages?: ChatMessage[];
+  status: StatusKey;
+  createdAt: string;
+  updatedAt?: string | null;
+  framework?: string;
+  flowData?: FlowData;
+};
+
+type ProductionTask = {
+  id: string;
+  title: string;
+  desc: string;
+  priority: string;
+  category: string;
+  column: string;
+  createdAt: string;
+  updatedAt?: string | null;
+};
+
+type CanvasPoint = { x: number; y: number };
+type CanvasStroke = { id: string; points: CanvasPoint[]; color: string; width: number };
+type CanvasElement = {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  text?: string;
+  color?: string;
+  textColor?: string;
+  src?: string;
+  fontSize?: number;
+};
+
+type ProjectModuleData = {
+  docs?: Document[];
+  tasks?: ProductionTask[];
+  elements?: CanvasElement[];
+  strokes?: CanvasStroke[];
+};
+
+type DocumentModuleData = ProjectModuleData & { docs: Document[] };
+type ProjectData = {
+  [projectId: string]: Record<string, ProjectModuleData | undefined> | undefined;
+  [projectId: number]: Record<string, ProjectModuleData | undefined> | undefined;
+};
+type ConfirmState = { type: "delete" | "clone"; id: ProjectId } | { type: "deleteDoc"; id: DocumentId } | null;
+type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
+type InsertHtmlRef = { current: ((html: string) => void) | null };
+type ModeChoice = "choice" | null;
+type MechanicNewMode = "choice" | "frameworks" | null;
+type EditableDiv = HTMLDivElement & { _init?: boolean };
 
 // ── Fallback global para erros antes do React montar ─────────────────────────
 if(typeof window !== 'undefined'){
@@ -210,7 +351,7 @@ function exportToPDF(project,sections){
 }
 
 // ── ImgResizeBar ──────────────────────────────────────────────────────────────
-function ImgResizeBar({img,color,onClose}){
+function ImgResizeBar({img,color,onClose}:{img: HTMLImageElement | null; color: string; onClose: () => void}){
   const [custom,setCustom]=useState('');
   if(!img)return null;
   const apply=w=>{img.style.width=w;img.style.maxWidth='100%';onClose();};
@@ -228,24 +369,24 @@ function ImgResizeBar({img,color,onClose}){
 }
 
 // ── DocEditor ─────────────────────────────────────────────────────────────────
-function DocEditor({value,color,onChange,insertRef}){
-  const edRef=useRef(null),fileRef=useRef(null);
-  const [imgModal,setImgModal]=useState(false),[imgPrompt,setImgPrompt]=useState(''),[genLoading,setGenLoading]=useState(false),[selImg,setSelImg]=useState(null),[,tick]=useState(0);
+function DocEditor({value,color,onChange,insertRef}:{value: string; color: string; onChange: (value: string) => void; insertRef: InsertHtmlRef}){
+  const edRef=useRef<EditableDiv | null>(null),fileRef=useRef<HTMLInputElement | null>(null);
+  const [imgModal,setImgModal]=useState(false),[imgPrompt,setImgPrompt]=useState(''),[genLoading,setGenLoading]=useState(false),[selImg,setSelImg]=useState<HTMLImageElement | null>(null),[,tick]=useState(0);
   const hoverClr=color||'#7c3aed';
   useEffect(()=>{if(edRef.current&&!edRef.current._init){edRef.current.innerHTML=value||'';edRef.current._init=true;}},[]);
-  useEffect(()=>{if(!insertRef)return;insertRef.current=html=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<hr>'+html);onChange(el.innerHTML);};},[insertRef,onChange]);
-  const exec=(cmd,val=null)=>{document.execCommand(cmd,false,val);edRef.current?.focus();tick(n=>n+1);};
-  const qState=cmd=>{try{return document.queryCommandState(cmd);}catch(e){return false;}};
-  const handleClick=e=>{if(e.target.tagName==='IMG')setSelImg(e.target);else setSelImg(null);};
-  const handleUpload=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{edRef.current?.focus();document.execCommand('insertHTML',false,'<br><img src="'+ev.target.result+'" alt="'+f.name+'" style="max-width:100%;border-radius:8px;margin:8px 0;display:block"><br>');onChange(edRef.current?.innerHTML||'');};r.readAsDataURL(f);e.target.value='';};
+  useEffect(()=>{if(!insertRef)return;insertRef.current=html=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<hr>'+html);onChange(el.innerHTML);};},[insertRef,onChange]);
+  const exec=(cmd:string,val?:string)=>{document.execCommand(cmd,false,val);edRef.current?.focus();tick(n=>n+1);};
+  const qState=(cmd: string)=>{try{return document.queryCommandState(cmd);}catch(e){return false;}};
+  const handleClick=(e: MouseEvent<HTMLDivElement>)=>{if(e.target instanceof HTMLImageElement)setSelImg(e.target);else setSelImg(null);};
+  const handleUpload=(e: ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const result=typeof r.result==='string'?r.result:'';if(!result)return;edRef.current?.focus();document.execCommand('insertHTML',false,'<br><img src="'+result+'" alt="'+f.name+'" style="max-width:100%;border-radius:8px;margin:8px 0;display:block"><br>');onChange(edRef.current?.innerHTML||'');};r.readAsDataURL(f);e.target.value='';};
   const handleGenImg=()=>{
     if(!imgPrompt.trim())return;setGenLoading(true);
     const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(imgPrompt)+'?width=640&height=360&nologo=true&seed='+Math.floor(Math.random()*99999);
     const img=new Image();
-    img.onload=()=>{edRef.current?.focus();const r=document.createRange();r.selectNodeContents(edRef.current);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<br><figure style="margin:12px 0;text-align:center"><img src="'+url+'" alt="'+imgPrompt+'" style="max-width:100%;border-radius:8px;display:block;margin:0 auto"><figcaption>'+imgPrompt+'</figcaption></figure><br>');onChange(edRef.current?.innerHTML||'');setGenLoading(false);setImgModal(false);setImgPrompt('');};
+    img.onload=()=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<br><figure style="margin:12px 0;text-align:center"><img src="'+url+'" alt="'+imgPrompt+'" style="max-width:100%;border-radius:8px;display:block;margin:0 auto"><figcaption>'+imgPrompt+'</figcaption></figure><br>');onChange(el.innerHTML||'');setGenLoading(false);setImgModal(false);setImgPrompt('');};
     img.onerror=()=>{setGenLoading(false);alert('Erro ao gerar. Tente outro prompt.');};img.src=url;
   };
-  const TB=({label,title,cmd,active,onClick})=><button title={title} onMouseDown={e=>{e.preventDefault();onClick?onClick():exec(cmd);}} style={{background:active?color+'22':'none',border:'1px solid '+(active?color:'var(--gdd-border)'),color:active?color:'var(--gdd-dim)',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:active?700:400}}>{label}</button>;
+  const TB=({label,title,cmd,active=false,onClick}:{label: string; title: string; cmd?: string; active?: boolean; onClick?: () => void})=><button title={title} onMouseDown={e=>{e.preventDefault();onClick?onClick():cmd&&exec(cmd);}} style={{background:active?color+'22':'none',border:'1px solid '+(active?color:'var(--gdd-border)'),color:active?color:'var(--gdd-dim)',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:active?700:400}}>{label}</button>;
   const imgHoverStyle='[contenteditable] img:hover{outline:2px solid '+hoverClr+'88}';
   return(
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',position:'relative'}}>
@@ -269,29 +410,29 @@ function DocEditor({value,color,onChange,insertRef}){
 }
 
 // ── CanvasBoard ───────────────────────────────────────────────────────────────
-function CanvasBoard({project,pData,setPData,onBack}){
+function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: ProjectData; setPData: SetProjectData; onBack: () => void}){
   const CLR='#fb923c';
   const SWATCHES=['#fef08a','#bbf7d0','#bfdbfe','#fecaca','#e9d5ff','#fed7aa'];
   const PEN_CLRS=['#f1f5f9','#f87171','#60a5fa','#34d399','#fbbf24','#a855f7'];
   const TOOLS=[{id:'select',label:'🖱️',title:'Selecionar'},{id:'sticky',label:'📌',title:'Post-it'},{id:'text',label:'T',title:'Texto'},{id:'pen',label:'✏️',title:'Caneta'},{id:'rect',label:'▭',title:'Retângulo'},{id:'circle',label:'◯',title:'Círculo'},{id:'image',label:'🖼️',title:'Imagem'}];
 
   const [tool,setTool]=useState('select');
-  const [elements,setElements]=useState(()=>pData?.[project.id]?.canvas?.elements||[]);
-  const [strokes,setStrokes]=useState(()=>pData?.[project.id]?.canvas?.strokes||[]);
-  const [selId,setSelId]=useState(null);
-  const [editId,setEditId]=useState(null);
+  const [elements,setElements]=useState<CanvasElement[]>(()=>pData?.[project.id]?.canvas?.elements||[]);
+  const [strokes,setStrokes]=useState<CanvasStroke[]>(()=>pData?.[project.id]?.canvas?.strokes||[]);
+  const [selId,setSelId]=useState<string | null>(null);
+  const [editId,setEditId]=useState<string | null>(null);
   const [elClr,setElClr]=useState('#fef08a');
   const [penClr,setPenClr]=useState('#f1f5f9');
   const [penSz,setPenSz]=useState(3);
   const [chatOpen,setChatOpen]=useState(true);
-  const [msgs,setMsgs]=useState([]);
+  const [msgs,setMsgs]=useState<ChatMessage[]>([]);
   const [chatIn,setChatIn]=useState('');
   const [chatLoad,setChatLoad]=useState(false);
   const [zoom,setZoom]=useState(1);
 
-  const boardRef=useRef(null),cvRef=useRef(null),fileRef=useRef(null),chatEndRef=useRef(null),innerBoardRef=useRef(null);
-  const pendPos=useRef(null),dragRef=useRef(null);
-  const drawActive=useRef(false),drawPts=useRef([]);
+  const boardRef=useRef<HTMLDivElement | null>(null),cvRef=useRef<HTMLCanvasElement | null>(null),fileRef=useRef<HTMLInputElement | null>(null),chatEndRef=useRef<HTMLDivElement | null>(null),innerBoardRef=useRef<HTMLDivElement | null>(null);
+  const pendPos=useRef<CanvasPoint | null>(null),dragRef=useRef<{id: string; ox: number; oy: number; sx: number; sy: number} | null>(null);
+  const drawActive=useRef(false),drawPts=useRef<CanvasPoint[]>([]);
   const penClrRef=useRef(penClr),penSzRef=useRef(penSz),toolRef=useRef(tool),zoomRef=useRef(1);
 
   useEffect(()=>{penClrRef.current=penClr;},[penClr]);
@@ -303,7 +444,7 @@ function CanvasBoard({project,pData,setPData,onBack}){
 
   const redrawStrokes=()=>{
     const cv=cvRef.current;if(!cv)return;
-    const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);
+    const ctx=cv.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,cv.width,cv.height);
     const strokesSnap=strokes;
     strokesSnap.forEach(s=>{
       if(s.points.length<2)return;
@@ -321,7 +462,7 @@ function CanvasBoard({project,pData,setPData,onBack}){
   useEffect(()=>{redrawStrokes();},[strokes]);
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[msgs,chatLoad]);
 
-  const bp=e=>{const r=boardRef.current.getBoundingClientRect();return{x:(e.clientX-r.left)/zoomRef.current,y:(e.clientY-r.top)/zoomRef.current};};
+  const bp=e=>{const r=boardRef.current?.getBoundingClientRect();if(!r)return{x:0,y:0};return{x:(e.clientX-r.left)/zoomRef.current,y:(e.clientY-r.top)/zoomRef.current};};
 
   const addEl=(type,x,y,src='')=>{
     const map={sticky:[160,160],text:[180,60],rect:[160,100],circle:[120,120],image:[200,150]};
@@ -333,7 +474,7 @@ function CanvasBoard({project,pData,setPData,onBack}){
   const updEl=(id,patch)=>setElements(p=>p.map(e=>e.id===id?{...e,...patch}:e));
   const delSel=()=>{if(selId){setElements(p=>p.filter(e=>e.id!==selId));setSelId(null);}};
   const undoStroke=()=>setStrokes(p=>p.slice(0,-1));
-  const clearAll=()=>{setElements([]);setStrokes([]);setSelId(null);setEditId(null);const cv=cvRef.current;if(cv){const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);}};
+  const clearAll=()=>{setElements([]);setStrokes([]);setSelId(null);setEditId(null);const cv=cvRef.current;if(cv){const ctx=cv.getContext('2d');ctx?.clearRect(0,0,cv.width,cv.height);}};
   const changeZoom=delta=>setZoom(z=>parseFloat(Math.min(3,Math.max(0.25,z+delta)).toFixed(2)));
   const resetZoom=()=>setZoom(1);
   const onWheel=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();changeZoom(e.deltaY<0?0.1:-0.1);}};
@@ -360,7 +501,7 @@ function CanvasBoard({project,pData,setPData,onBack}){
     if(!drawActive.current)return;
     const pos=bp(e);drawPts.current=[...drawPts.current,pos];
     const cv=cvRef.current;if(!cv)return;
-    const ctx=cv.getContext('2d');const pts=drawPts.current;if(pts.length<2)return;
+    const ctx=cv.getContext('2d');const pts=drawPts.current;if(!ctx||pts.length<2)return;
     ctx.beginPath();ctx.strokeStyle=penClrRef.current;ctx.lineWidth=penSzRef.current;
     ctx.lineCap='round';ctx.lineJoin='round';
     ctx.moveTo(pts[pts.length-2].x,pts[pts.length-2].y);ctx.lineTo(pts[pts.length-1].x,pts[pts.length-1].y);ctx.stroke();
@@ -383,7 +524,7 @@ function CanvasBoard({project,pData,setPData,onBack}){
 
   const sendChat=async()=>{
     if(!chatIn.trim()||chatLoad)return;
-    const um={role:'user',content:chatIn},nm=[...msgs,um];
+    const um: ChatMessage={role:'user',content:chatIn},nm=[...msgs,um];
     setMsgs(nm);setChatIn('');setChatLoad(true);
     const sys='Você é um especialista em análise e benchmarking de jogos. Sua ÚNICA função é ajudar game designers a encontrar e analisar jogos de referência. Ao receber perguntas sobre mecânicas, gêneros ou estilos, forneça recomendações de 3-5 jogos com análise concisa de cada um (mecânicas-chave, público, diferenciais). Seja direto e útil. Responda SOMENTE sobre jogos e game design. Responda em português brasileiro.';
     try{
@@ -510,8 +651,8 @@ function CanvasBoard({project,pData,setPData,onBack}){
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{
-        const f=e.target.files[0];if(!f)return;
-        const r=new FileReader();r.onload=ev=>{const pos=pendPos.current||{x:200,y:200};addEl('image',pos.x,pos.y,ev.target.result);};
+        const f=e.target.files?.[0];if(!f)return;
+        const r=new FileReader();r.onload=()=>{const result=typeof r.result==='string'?r.result:'';if(!result)return;const pos=pendPos.current||{x:200,y:200};addEl('image',pos.x,pos.y,result);};
         r.readAsDataURL(f);e.target.value='';
       }}/>
     </div>
@@ -563,9 +704,9 @@ function DoubleAGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiMsgs,setAiMsgs]=useState([[],[],[],[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const [charImgUpload,setCharImgUpload]=useState('');
-  const charImgFileRef=useRef(null);
+  const charImgFileRef=useRef<HTMLInputElement | null>(null);
 
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -617,7 +758,7 @@ Escreva 2 a 3 frases que capturem a essência do personagem — sua forma de agi
   const handleCharImgUpload=(e)=>{
     const f=e.target.files[0];if(!f)return;
     const r=new FileReader();
-    r.onload=ev=>setCharImgUpload(ev.target.result);
+    r.onload=()=>{if(typeof r.result==='string')setCharImgUpload(r.result);};
     r.readAsDataURL(f);
     e.target.value='';
   };
@@ -1128,7 +1269,7 @@ function MDAGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -1419,7 +1560,7 @@ function FourKeysGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -1790,7 +1931,7 @@ function ColorsGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -2227,7 +2368,7 @@ function OctalysisGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -2672,7 +2813,7 @@ function PENSGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -3080,7 +3221,7 @@ function ElementalTetradGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
@@ -3489,7 +3630,7 @@ function LudonarrativeGuide({project,pData,setPData,onBack,onDocCreated}){
   const [aiInput,setAiInput]=useState('');
   const [aiMsgs,setAiMsgs]=useState([[],[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
-  const chatEndRef=useRef(null);
+  const chatEndRef=useRef<HTMLDivElement | null>(null);
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
   const updateRow=(idx,field,val)=>setRows(r=>r.map((row,i)=>i===idx?{...row,[field]:val}:row));
@@ -4315,28 +4456,28 @@ function FbNodePreview({type,color}){
   return (<svg width={24} height={16} viewBox="0 0 24 16"><rect width={24} height={16} rx={3} fill={fill} stroke={stroke} strokeWidth={1.5}/></svg>);
 }
 
-function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}){
+function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Project; pData: ProjectData; setPData: SetProjectData; doc: Document | null; onBack: () => void; lang?: LangKey}){
   const CLR='#f472b6';
-  const [nodes,setNodes]=useState(()=>doc?.flowData?.nodes||[]);
-  const [edges,setEdges]=useState(()=>doc?.flowData?.edges||[]);
-  const [selected,setSelected]=useState(null);
-  const [dragging,setDragging]=useState(null);
-  const [connecting,setConnecting]=useState(null);
-  const [editingId,setEditingId]=useState(null);
+  const [nodes,setNodes]=useState<FlowNode[]>(()=>doc?.flowData?.nodes||[]);
+  const [edges,setEdges]=useState<FlowEdge[]>(()=>doc?.flowData?.edges||[]);
+  const [selected,setSelected]=useState<FlowSelection>(null);
+  const [dragging,setDragging]=useState<FlowDragging>(null);
+  const [connecting,setConnecting]=useState<FlowConnecting>(null);
+  const [editingId,setEditingId]=useState<string | null>(null);
   const [editLabel,setEditLabel]=useState('');
   const [pan,setPan]=useState({x:100,y:80});
   const [zoom,setZoom]=useState(1);
-  const [panning,setPanning]=useState(null);
+  const [panning,setPanning]=useState<FlowPanning>(null);
   const [title,setTitle]=useState(doc?.title||'Novo Fluxo');
   const [editingTitle,setEditingTitle]=useState(false);
   const [saved,setSaved]=useState(true);
   // ── Reference panel state ──
   const [refPanelOpen,setRefPanelOpen]=useState(false);
-  const [refDoc,setRefDoc]=useState(null);
-  const [refMod,setRefMod]=useState(null);
+  const [refDoc,setRefDoc]=useState<Document | null>(null);
+  const [refMod,setRefMod]=useState<ModuleMeta | null>(null);
   const [showDocPicker,setShowDocPicker]=useState(false);
-  const [pickerMod,setPickerMod]=useState(null);
-  const svgRef=useRef(null);
+  const [pickerMod,setPickerMod]=useState<ModuleMeta | null>(null);
+  const svgRef=useRef<SVGSVGElement | null>(null);
   const docId=useRef(doc?.id||uid());
 
   // Recalcula tamanho de todos os nós ao montar (garante que dados pré-carregados também ficam corretos)
@@ -4347,7 +4488,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}){
   const saveFlow=useCallback(()=>{
     const mId='flowcharts',pId=project.id;
     const snap=`<p style="color:var(--gdd-muted);font-size:12px">${nodes.length} nó${nodes.length!==1?'s':''} · ${edges.length} conexão${edges.length!==1?'ões':''}</p>`;
-    const updated={...doc,id:docId.current,title,flowData:{nodes,edges},content:snap,framework:'flowbuilder',updatedAt:todayStr()};
+    const updated={...(doc||{}),id:docId.current,title,flowData:{nodes,edges},content:snap,framework:'flowbuilder',updatedAt:todayStr(),status:doc?.status||'progress',createdAt:doc?.createdAt||todayStr()};
     setPData(prev=>{
       const curr=prev?.[pId]?.[mId]||{docs:[]};
       const exists=curr.docs.some(d=>d.id===docId.current);
@@ -4397,7 +4538,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}){
   const onMove=e=>{
     if(panning)setPan({x:panning.sp.x+(e.clientX-panning.sx),y:panning.sp.y+(e.clientY-panning.sy)});
     if(dragging){const{x,y}=toCanvas(e);setNodes(ns=>ns.map(n=>n.id===dragging.id?{...n,x:x-dragging.ox,y:y-dragging.oy}:n));}
-    if(connecting){const{x,y}=toCanvas(e);setConnecting(c=>({...c,cx:x,cy:y}));}
+    if(connecting){const{x,y}=toCanvas(e);setConnecting(c=>c?({...c,cx:x,cy:y}):c);}
   };
   const onUp=e=>{
     setPanning(null);setDragging(null);
@@ -4407,7 +4548,9 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}){
       if(target){
         // best toPort
         let bestP='top',bestD=Infinity;
-        FB_PORTS.forEach(tp=>{const[bx,by]=fbPortAbs(target,tp);const[ax,ay]=fbPortAbs(nodes.find(n=>n.id===connecting.fromId),connecting.fromPort);const d=Math.hypot(ax-bx,ay-by);if(d<bestD){bestD=d;bestP=tp;}});
+        const source=nodes.find(n=>n.id===connecting.fromId);
+        if(!source){setConnecting(null);return;}
+        FB_PORTS.forEach(tp=>{const[bx,by]=fbPortAbs(target,tp);const[ax,ay]=fbPortAbs(source,connecting.fromPort);const d=Math.hypot(ax-bx,ay-by);if(d<bestD){bestD=d;bestP=tp;}});
         const dup=edges.some(e=>e.from===connecting.fromId&&e.to===target.id);
         if(!dup)setEdges(es=>[...es,{id:uid(),from:connecting.fromId,to:target.id,fromPort:connecting.fromPort,toPort:bestP}]);
       }
@@ -4419,18 +4562,22 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}){
     if(editingId)return;
     const{x,y}=toCanvas(e);
     const n=nodes.find(n=>n.id===nodeId);
+    if(!n)return;
     setSelected({type:'node',id:nodeId});
     setDragging({id:nodeId,ox:x-n.x,oy:y-n.y});
   };
   const onPortDown=(e,nodeId,port)=>{
     e.stopPropagation();
-    const[ax,ay]=fbPortAbs(nodes.find(n=>n.id===nodeId),port);
+    const node=nodes.find(n=>n.id===nodeId);
+    if(!node)return;
+    const[ax,ay]=fbPortAbs(node,port);
     setConnecting({fromId:nodeId,fromPort:port,ax,ay,cx:ax,cy:ay});
     setDragging(null);
   };
   const onNodeDbl=(e,nodeId)=>{
     e.stopPropagation();
     const n=nodes.find(n=>n.id===nodeId);
+    if(!n)return;
     setEditingId(nodeId);setEditLabel(n.label);setDragging(null);
   };
   const commitLabel=()=>{setNodes(ns=>ns.map(n=>{if(n.id!==editingId)return n;const{w,h}=fbAutoSize(n.type,editLabel);return{...n,label:editLabel,w,h};}));setEditingId(null);};
@@ -5423,12 +5570,12 @@ class GDTErrorBoundary extends Component {
 }
 
 function GDDHubInner(){
-  const [lang,setLang]=useState(()=>lsGet(LS_KEYS.lang,'pt'));
-  const [theme,setTheme]=useState(()=>lsGet(LS_KEYS.theme,'dark'));
+  const [lang,setLang]=useState<LangKey>(()=>lsGet(LS_KEYS.lang,'pt') as LangKey);
+  const [theme,setTheme]=useState<ThemeKey>(()=>lsGet(LS_KEYS.theme,'dark') as ThemeKey);
   const t=TR[lang]||TR.pt;
   const th=THEMES[theme]||THEMES.dark;
   const S=mkS(th);
-  const MODULES=MODULES_I18N[lang];
+  const MODULES=(MODULES_I18N[lang]||MODULES_I18N.pt) as ModuleMeta[];
   const STATUS_L={ progress:{label:t.st_progress,color:'#fbbf24',bg:'#fbbf2415'}, done:{label:t.st_done,color:'#34d399',bg:'#34d39915'} };
 
   // Inject CSS variables for theming (used by sub-components)
@@ -5438,15 +5585,15 @@ function GDDHubInner(){
     r.style.setProperty('--gdd-text-color',th.text);
   },[th]);
 
-  const [view,setView]=useState('landing');
-  const ECHOES_DEFAULT=[
+  const [view,setView]=useState<ViewKey>('landing');
+  const ECHOES_DEFAULT: Project[]=[
     {id:1,name:'Echoes of the Void',genre:'RPG de Ação',   platform:'PC / Console',color:'#7c3aed',emoji:'🌌',progress:65},
     {id:2,name:'Cardboard Kingdom', genre:'Jogo de Tabuleiro',platform:'Board Game',color:'#06b6d4',emoji:'♟️',progress:30},
     {id:3,name:'Neon Runners',      genre:'Endless Runner', platform:'Mobile',      color:'#f59e0b',emoji:'🏃',progress:10},
   ];
-  const [projects,setProjects]=useState(()=>lsGet(LS_KEYS.projects,ECHOES_DEFAULT));
-  const [project,setProject]=useState(null),[module,setModule]=useState(null),[activeDoc,setActiveDoc]=useState(null);
-  const PDATA_DEFAULT={
+  const [projects,setProjects]=useState<Project[]>(()=>lsGet(LS_KEYS.projects,ECHOES_DEFAULT) as Project[]);
+  const [project,setProject]=useState<Project | null>(null),[module,setModule]=useState<ModuleMeta | null>(null),[activeDoc,setActiveDoc]=useState<Document | null>(null);
+  const PDATA_DEFAULT: ProjectData={
     1:{
       mechanics:{docs:[
         {id:'m1',title:'Sistema de Combate — Ecos e Ressonância',content:`<h2>⚔️ Sistema de Combate — Ecos e Ressonância</h2><p>O sistema central de combate de <strong>Echoes of the Void</strong> é construído em torno da mecânica de <strong>Ecos</strong>: toda ação do jogador gera uma "onda" no ambiente que pode ser amplificada, refletida ou absorvida dependendo do contexto.</p><hr><h3>Loop Principal</h3><p>O jogador alterna entre dois estados: <strong>Modo Físico</strong> (ataques diretos, movimentação tangível) e <strong>Modo Etéreo</strong> (habilidades baseadas em Ecos, teleporte curto, invisibilidade parcial). Trocar de modo tem custo de <em>Ressonância</em> — o recurso principal do jogo.</p><h3>Recursos</h3><ul><li><strong>Ressonância</strong> — barra principal. Regenera ao atacar em Modo Físico. Consome em habilidades Etéreas.</li><li><strong>Vitalidade</strong> — HP tradicional. Não regenera sozinha; requer consumíveis ou habilidades específicas.</li><li><strong>Ecos Ativos</strong> — contador de até 5 Ecos no campo. Cada Echo causa efeitos passivos e pode ser "detonado" por habilidades específicas.</li></ul><hr><h3>Mecânica de Ecos</h3><p>Ao acertar inimigos, o jogador deposita um <em>Eco</em> neles. Ecos acumulam e criam combos:</p><ul><li><strong>1 Eco</strong> — dano leve bônus no próximo ataque</li><li><strong>3 Ecos</strong> — stagger automático no inimigo</li><li><strong>5 Ecos</strong> — habilidade <em>Ressonância Total</em> disponível: explosão em área</li></ul><hr><h3>Balanceamento de Risco/Recompensa</h3><p>Permanecer no Modo Etéreo por muito tempo drena Ressonância até zerar, forçando o jogador de volta ao Físico em momento vulnerável. O loop de risco está em saber quando trocar de modo para maximizar Ecos sem se expor demais.</p>`,messages:[],status:'done',createdAt:'10/03/2026',updatedAt:'12/03/2026'},
@@ -5492,19 +5639,19 @@ function GDDHubInner(){
       ]},
     },
   };
-  const [pData,setPData]=useState(()=>lsGet(LS_KEYS.pData,PDATA_DEFAULT));
+  const [pData,setPData]=useState<ProjectData>(()=>lsGet(LS_KEYS.pData,PDATA_DEFAULT) as ProjectData);
   const [editContent,setEditContent]=useState(''),[hasUnsaved,setHasUnsaved]=useState(false);
   const [input,setInput]=useState(''),[loading,setLoading]=useState(false);
   const [scrolled,setScrolled]=useState(false);
   const [showNew,setShowNew]=useState(false),[showNewDoc,setShowNewDoc]=useState(false),[newDocTitle,setNewDocTitle]=useState('');
   const [form,setForm]=useState({name:'',genre:'',platform:''});
-  const [confirm,setConfirm]=useState(null),[showExport,setShowExport]=useState(false);
-  const [mechNewMode,setMechNewMode]=useState(null); // null | 'choice' | 'frameworks'
-  const [narrNewMode,setNarrNewMode]=useState(null); // null | 'choice'
-  const [wbNewMode,setWbNewMode]=useState(null);     // null | 'choice'
-  const [ldNewMode,setLdNewMode]=useState(null);     // null | 'choice'
-  const [charNewMode,setCharNewMode]=useState(null); // null | 'choice'
-  const chatRef=useRef(null),insertRef=useRef(null);
+  const [confirm,setConfirm]=useState<ConfirmState>(null),[showExport,setShowExport]=useState(false);
+  const [mechNewMode,setMechNewMode]=useState<MechanicNewMode>(null); // null | 'choice' | 'frameworks'
+  const [narrNewMode,setNarrNewMode]=useState<ModeChoice>(null); // null | 'choice'
+  const [wbNewMode,setWbNewMode]=useState<ModeChoice>(null);     // null | 'choice'
+  const [ldNewMode,setLdNewMode]=useState<ModeChoice>(null);     // null | 'choice'
+  const [charNewMode,setCharNewMode]=useState<ModeChoice>(null); // null | 'choice'
+  const chatRef=useRef<HTMLDivElement | null>(null),insertRef=useRef<((html: string) => void) | null>(null);
 
   useEffect(()=>{const fn=()=>setScrolled(window.scrollY>30);window.addEventListener('scroll',fn);return()=>window.removeEventListener('scroll',fn);},[]);
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
@@ -5515,62 +5662,67 @@ function GDDHubInner(){
   useEffect(()=>{lsSet(LS_KEYS.projects,projects);},[projects]);
   useEffect(()=>{lsSet(LS_KEYS.pData,pData);},[pData]);
 
-  const getMod=(pId,mId)=>pData?.[pId]?.[mId]||{docs:[]};
-  const setMod=(pId,mId,d)=>setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:d}}));
+  const getMod=(pId?: ProjectId | null,mId?: string | null): DocumentModuleData=>{
+    if(pId==null||!mId)return{docs:[]};
+    const data=pData?.[pId]?.[mId]||{};
+    return{...data,docs:data.docs||[]};
+  };
+  const setMod=(pId: ProjectId,mId: string,d: ProjectModuleData)=>setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:d}}));
   const modDocs=()=>getMod(project?.id,module?.id).docs||[];
 
-  const buildCtx=(pId,mId,docId)=>{
+  const buildCtx=(pId: ProjectId,mId: string,docId: DocumentId)=>{
     const proj=projects.find(p=>p.id===pId),data=pData[pId]||{};
     let ctx='PROJETO: "'+proj?.name+'" | Gênero: '+proj?.genre+' | Plataforma: '+proj?.platform+'\n\n';
     MODULES.filter(m=>m.id!=='brainstorming'&&m.id!=='production').forEach(m=>{const md=data[m.id];if(!md?.docs?.length)return;ctx+='=== '+m.label+' ===\n';md.docs.forEach(doc=>{ctx+='• "'+doc.title+'"'+(m.id===mId&&doc.id===docId?' ← DOC ATUAL':'')+': '+stripHtml(doc.content).slice(0,300)+'\n';});ctx+='\n';});
     return ctx;
   };
-  const getDocMessages=()=>!activeDoc||!project||!module?[]:getMod(project.id,module.id).docs.find(d=>d.id===activeDoc.id)?.messages||[];
+  const getDocMessages=(): ChatMessage[]=>!activeDoc||!project||!module?[]:getMod(project.id,module.id).docs.find(d=>d.id===activeDoc.id)?.messages||[];
 
   const createProject=()=>{if(!form.name.trim())return;const idx=projects.length;setProjects(p=>[...p,{id:uid(),name:form.name,genre:form.genre||'Indefinido',platform:form.platform||'Indefinida',color:PALETTE[idx%PALETTE.length],emoji:EMOJIS[idx%EMOJIS.length],progress:0}]);setForm({name:'',genre:'',platform:''});setShowNew(false);};
-  const deleteProject=id=>{setProjects(p=>p.filter(x=>x.id!==id));setPData(d=>{const n={...d};delete n[id];return n;});setConfirm(null);};
-  const cloneProject=id=>{const src=projects.find(p=>p.id===id),idx=projects.length,nId=uid();setProjects(p=>[...p,{...src,id:nId,name:src.name+' (Cópia)',color:PALETTE[idx%PALETTE.length],emoji:EMOJIS[idx%EMOJIS.length],progress:0}]);setPData(d=>({...d,[nId]:JSON.parse(JSON.stringify(d[id]||{}))}));setConfirm(null);};
+  const deleteProject=(id: ProjectId)=>{setProjects(p=>p.filter(x=>x.id!==id));setPData(d=>{const n={...d};delete n[id];return n;});setConfirm(null);};
+  const cloneProject=(id: ProjectId)=>{const src=projects.find(p=>p.id===id);if(!src)return;const idx=projects.length,nId=uid();setProjects(p=>[...p,{...src,id:nId,name:src.name+' (Cópia)',color:PALETTE[idx%PALETTE.length],emoji:EMOJIS[idx%EMOJIS.length],progress:0}]);setPData(d=>({...d,[nId]:JSON.parse(JSON.stringify(d[id]||{}))}));setConfirm(null);};
   const createDoc=()=>{
     if(!newDocTitle.trim()||!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
-    const doc={id:uid(),title:newDocTitle.trim(),content:'',messages:[],status:'progress',createdAt:todayStr(),updatedAt:null};
+    const doc: Document={id:uid(),title:newDocTitle.trim(),content:'',messages:[],status:'progress',createdAt:todayStr(),updatedAt:null};
     setMod(pId,mId,{...curr,docs:[...(curr.docs||[]),doc]});
     setNewDocTitle('');setShowNewDoc(false);openDoc(doc);
   };
-  const openDoc=doc=>{setActiveDoc(doc);setEditContent(doc.content);setHasUnsaved(false);setView('document');};
+  const openDoc=(doc: Document)=>{setActiveDoc(doc);setEditContent(doc.content);setHasUnsaved(false);setView('document');};
   const saveDoc=()=>{
     if(!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId),now=todayStr();
     setMod(pId,mId,{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,content:editContent,updatedAt:now}:d)});
-    setActiveDoc(d=>({...d,content:editContent,updatedAt:now}));setHasUnsaved(false);
+    setActiveDoc(d=>d?({...d,content:editContent,updatedAt:now}):d);setHasUnsaved(false);
   };
-  const toggleStatus=docId=>{
+  const toggleStatus=(docId: DocumentId)=>{
     if(!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
     setMod(pId,mId,{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,status:d.status==='progress'?'done':'progress'}:d)});
-    if(activeDoc?.id===docId)setActiveDoc(v=>({...v,status:v.status==='progress'?'done':'progress'}));
+    if(activeDoc?.id===docId)setActiveDoc(v=>v?({...v,status:v.status==='progress'?'done':'progress'}):v);
   };
-  const deleteDoc=docId=>{
+  const deleteDoc=(docId: DocumentId)=>{
     if(!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
     setMod(pId,mId,{...curr,docs:curr.docs.filter(d=>d.id!==docId)});setView('module');
   };
-  const renameDoc=title=>{
+  const renameDoc=(title: string)=>{
     if(!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
     setMod(pId,mId,{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,title}:d)});
-    setActiveDoc(v=>({...v,title}));
+    setActiveDoc(v=>v?({...v,title}):v);
   };
 
   const send=async()=>{
     if(!input.trim()||loading||!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id;
-    const userMsg={role:'user',content:input};
+    const userMsg: ChatMessage={role:'user',content:input};
     // Use functional updater to avoid stale closure — reads current pData at update time
     setInput('');setLoading(true);
-    let currentMsgs=[];
+    let currentMsgs: ChatMessage[]=[];
     setPData(prev=>{
-      const curr=prev?.[pId]?.[mId]||{docs:[]};
+      const raw=prev?.[pId]?.[mId]||{};
+      const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
       const doc=curr.docs.find(d=>d.id===activeDoc.id);
       currentMsgs=[...(doc?.messages||[]),userMsg];
       return{...prev,[pId]:{...(prev[pId]||{}),[mId]:{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,messages:currentMsgs}:d)}}};
@@ -5579,11 +5731,13 @@ function GDDHubInner(){
     try{
       const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:sys,messages:currentMsgs})});
       const data=await r.json(),reply=data.content?.[0]?.text||'Erro.';
+      const assistantMsg: ChatMessage={role:'assistant',content:reply};
       // Use functional updater again to avoid stale closure on the response write
       setPData(prev=>{
-        const curr=prev?.[pId]?.[mId]||{docs:[]};
+        const raw=prev?.[pId]?.[mId]||{};
+        const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
         const doc=curr.docs.find(d=>d.id===activeDoc.id);
-        const updatedMsgs=[...(doc?.messages||[]),{role:'assistant',content:reply}];
+        const updatedMsgs=[...(doc?.messages||[]),assistantMsg];
         return{...prev,[pId]:{...(prev[pId]||{}),[mId]:{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,messages:updatedMsgs}:d)}}};
       });
     }catch(e){console.error(e);}finally{setLoading(false);}
@@ -5591,6 +5745,9 @@ function GDDHubInner(){
   useEffect(()=>{chatRef.current?.scrollIntoView({behavior:'smooth'});},[pData,loading]);
 
   const clr=module?.color||'#7c3aed';
+  const getModuleById=(id: string)=>MODULES.find(m=>m.id===id)||null;
+  const setLangControl=setLang as Dispatch<SetStateAction<string>>;
+  const setThemeControl=setTheme as Dispatch<SetStateAction<string>>;
 
   const Confirm=()=>!confirm||confirm.type==='deleteDoc'?null:(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}}>
@@ -5614,7 +5771,7 @@ function GDDHubInner(){
         <span style={{fontSize:17,fontWeight:800,background:'linear-gradient(135deg,#a855f7,#22d3ee)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>🎮 Game Design Tool</span>
         <div style={{display:'flex',alignItems:'center',gap:20}}>
           {[{label:t.nav1,href:'hero'},{label:t.nav2,href:'how'},{label:t.nav3,href:'modules'},{label:t.nav4,href:'forwhom'}].map(l=><button key={l.href} onClick={()=>scrollTo(l.href)} style={{background:'none',border:'none',color:th.muted,cursor:'pointer',fontSize:13,fontWeight:500,padding:0}}>{l.label}</button>)}
-          <LangToggle lang={lang} setLang={setLang}/><ThemeToggle theme={theme} setTheme={setTheme}/>
+          <LangToggle lang={lang} setLang={setLangControl}/><ThemeToggle theme={theme} setTheme={setThemeControl}/>
           <button style={S.btn('#7c3aed','#fff',{padding:'8px 18px'})} onClick={()=>setView('dashboard')}>{t.navBtn}</button>
         </div>
       </div>
@@ -5697,7 +5854,7 @@ function GDDHubInner(){
       <div style={{padding:'0 24px',height:54,borderBottom:'1px solid '+th.border2,display:'flex',alignItems:'center',justifyContent:'space-between',background:th.bg,position:'sticky',top:0,zIndex:20}}>
         <button style={S.back} onClick={()=>setView('landing')}>← Início</button>
         <span style={{fontSize:16,fontWeight:800,background:'linear-gradient(135deg,#a855f7,#22d3ee)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>🎮 Game Design Tool</span>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLang}/><ThemeToggle theme={theme} setTheme={setTheme}/><button style={S.btn()} onClick={()=>setShowNew(true)}>{t.dash_new}</button></div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLangControl}/><ThemeToggle theme={theme} setTheme={setThemeControl}/><button style={S.btn()} onClick={()=>setShowNew(true)}>{t.dash_new}</button></div>
       </div>
       <div style={{padding:28}}>
         <h2 style={{margin:'0 0 4px',fontSize:22,fontWeight:700}}>{t.dash_h}</h2>
@@ -5750,68 +5907,68 @@ function GDDHubInner(){
 
   if(view==='mda-guided')return(
     <MDAGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='mechanics'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='mechanics'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('mechanics'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('mechanics'));openDoc(doc);}}/>
   );
 
   if(view==='double-a-guided')return(
     <DoubleAGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setCharNewMode(null);setView('module');setModule(MODULES.find(m=>m.id==='characters'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='characters'));openDoc(doc);}}/>
+      onBack={()=>{setCharNewMode(null);setView('module');setModule(getModuleById('characters'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('characters'));openDoc(doc);}}/>
   );
 
   if(view==='fourkeys-guided')return(
     <FourKeysGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='mechanics'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='mechanics'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('mechanics'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('mechanics'));openDoc(doc);}}/>
   );
 
   if(view==='colors-guided')return(
     <ColorsGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='mechanics'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='mechanics'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('mechanics'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('mechanics'));openDoc(doc);}}/>
   );
 
   if(view==='octalysis-guided')return(
     <OctalysisGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='mechanics'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='mechanics'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('mechanics'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('mechanics'));openDoc(doc);}}/>
   );
 
   if(view==='pens-guided')return(
     <PENSGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='mechanics'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='mechanics'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('mechanics'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('mechanics'));openDoc(doc);}}/>
   );
 
   if(view==='tetrad-guided')return(
     <ElementalTetradGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='mechanics'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='mechanics'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('mechanics'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('mechanics'));openDoc(doc);}}/>
   );
 
   if(view==='ludonarrative-guided')return(
     <LudonarrativeGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='narrative'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='narrative'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('narrative'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('narrative'));openDoc(doc);}}/>
   );
 
   if(view==='reedsy-wb-guided')return(
     <ReedsyWorldbuildingGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='worldbuilding'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='worldbuilding'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('worldbuilding'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('worldbuilding'));openDoc(doc);}}/>
   );
 
   if(view==='unity-ld-guided')return(
     <UnityLDGuide project={project} pData={pData} setPData={setPData}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='leveldesign'));}}
-      onDocCreated={doc=>{setModule(MODULES.find(m=>m.id==='leveldesign'));openDoc(doc);}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('leveldesign'));}}
+      onDocCreated={(doc: Document)=>{setModule(getModuleById('leveldesign'));openDoc(doc);}}/>
   );
 
   if(view==='flow-builder')return(
     !project?null:
     <FlowBuilder project={project} pData={pData} setPData={setPData} doc={activeDoc} lang={lang}
-      onBack={()=>{setView('module');setModule(MODULES.find(m=>m.id==='flowcharts'));}}/>
+      onBack={()=>{setView('module');setModule(getModuleById('flowcharts'));}}/>
   );
 
   if(view==='project')return(!project?null:
@@ -5822,7 +5979,7 @@ function GDDHubInner(){
           <span style={{fontWeight:700,fontSize:15}}>{project.emoji} {project.name}</span>
           <span style={{color:th.muted,fontSize:12}}>{project.genre} · {project.platform}</span>
         </div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLang}/><ThemeToggle theme={theme} setTheme={setTheme}/><button style={S.btn('#1a1a2e','#a78bfa',{border:'1px solid #4c1d9544',padding:'7px 16px',fontSize:13})} onClick={()=>setShowExport(true)}>📥 Exportar GDD</button></div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLangControl}/><ThemeToggle theme={theme} setTheme={setThemeControl}/><button style={S.btn('#1a1a2e','#a78bfa',{border:'1px solid #4c1d9544',padding:'7px 16px',fontSize:13})} onClick={()=>setShowExport(true)}>📥 Exportar GDD</button></div>
       </div>
       <div style={{padding:28}}>
         <h2 style={{margin:'0 0 4px',fontSize:20,fontWeight:700}}>Módulos</h2>
@@ -5872,17 +6029,17 @@ function GDDHubInner(){
     const isLevelDesign=module.id==='leveldesign';
     const isCharacters=module.id==='characters';
     const openNewFlow=()=>{
-      const doc={id:uid(),title:'Novo Fluxo',content:'',flowData:{nodes:[],edges:[]},framework:'flowbuilder',status:'progress',createdAt:todayStr()};
+      const doc: Document={id:uid(),title:'Novo Fluxo',content:'',flowData:{nodes:[],edges:[]},framework:'flowbuilder',status:'progress',createdAt:todayStr()};
       setActiveDoc(doc);setView('flow-builder');
     };
-    const openFlowDoc=doc=>{setActiveDoc(doc);setView('flow-builder');};
+    const openFlowDoc=(doc: Document)=>{setActiveDoc(doc);setView('flow-builder');};
     const openNewDocFlow=()=>isMechanics?setMechNewMode('choice'):isNarrative?setNarrNewMode('choice'):isWorldbuilding?setWbNewMode('choice'):isFlowcharts?openNewFlow():isLevelDesign?setLdNewMode('choice'):isCharacters?setCharNewMode('choice'):setShowNewDoc(true);
     const newBtnLabel=isFlowcharts?'+ '+t.flow_new:t.mod_newdoc;
     return(
       <div style={S.app}>
         <div style={{padding:'0 20px',height:54,borderBottom:'1px solid '+th.border2,display:'flex',alignItems:'center',justifyContent:'space-between',background:th.bg,position:'sticky',top:0,zIndex:20}}>
           <div style={{display:'flex',alignItems:'center',gap:12}}><button style={S.back} onClick={()=>setView('project')}>← {project.name}</button><span style={{color:clr,fontWeight:700,fontSize:15}}>{module.icon} {module.label}</span></div>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLang}/><ThemeToggle theme={theme} setTheme={setTheme}/><button style={S.btn(clr,'#fff',{padding:'7px 16px',fontSize:13})} onClick={openNewDocFlow}>{newBtnLabel}</button></div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLangControl}/><ThemeToggle theme={theme} setTheme={setThemeControl}/><button style={S.btn(clr,'#fff',{padding:'7px 16px',fontSize:13})} onClick={openNewDocFlow}>{newBtnLabel}</button></div>
         </div>
         <div style={{padding:28}}>
           <h2 style={{margin:'0 0 4px',fontSize:20,fontWeight:700}}>{module.icon} {module.label}</h2>
