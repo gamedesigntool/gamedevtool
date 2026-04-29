@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Component, type ChangeEvent, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
+import { FB_DEFS, FB_PORTS } from "./features/flowBuilder/flowBuilderConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
@@ -4180,17 +4181,6 @@ function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
 }
 
 // ── FlowBuilder ───────────────────────────────────────────────────────────────
-const FB_DEFS={
-  start:   {label:'Início',        color:'#34d399',w:130,h:44},
-  end:     {label:'Fim',           color:'#f87171',w:130,h:44},
-  process: {label:'Processo',      color:'#60a5fa',w:150,h:52},
-  decision:{label:'Decisão',       color:'#fbbf24',w:150,h:72},
-  io:      {label:'Entrada/Saída', color:'#c084fc',w:150,h:52},
-  sub:     {label:'Subprocesso',   color:'var(--gdd-muted)',w:150,h:52},
-  note:    {label:'Nota',          color:'#fdba74',w:150,h:58},
-};
-const FB_PORTS=['top','right','bottom','left'];
-
 // Calcula w/h da node com base no texto — garante que nenhum label seja truncado
 function fbAutoSize(type, label){
   const def=FB_DEFS[type];
