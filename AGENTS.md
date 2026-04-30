@@ -221,6 +221,29 @@ AI agents may:
 - explain when a new branch should be created
 - explain when a merge is appropriate
 
+Branch naming should follow:
+
+<type>/<short-description>
+
+Where type is one of:
+- feature
+- refactor
+- bugfix
+- hotfix
+- docs
+- chore
+
+Branch strategy:
+
+- Prefer grouping related architectural changes into a single feature branch
+  (e.g., feature/architecture-boundaries)
+
+- Inside the branch:
+  - keep commits small and focused
+  - each commit should represent a safe, behavior-preserving step
+
+- Avoid creating overly granular branches for each small refactor step
+
 For architecture, persistence, routing, or Supabase-related work:
 - recommend creating a feature branch
 - keep changes small and behavior-preserving
