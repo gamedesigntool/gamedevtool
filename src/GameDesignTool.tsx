@@ -9,6 +9,7 @@ import { CLR as OCTALYSIS_CLR, CDS as OCTALYSIS_CDS, GUIDE as OCTALYSIS_GUIDE, S
 import { AESTHETICS as MDA_AESTHETICS, CLR as MDA_CLR, GUIDE as MDA_GUIDE, STEPS as MDA_STEPS } from "./features/guides/mda/mdaConstants";
 import { CLR as PENS_CLR, COMPONENTS as PENS_COMPONENTS, GUIDE as PENS_GUIDE, STEPS as PENS_STEPS } from "./features/guides/pens/pensConstants";
 import { CLR as REEDSY_WB_CLR, STEPS as REEDSY_WB_STEPS } from "./features/guides/reedsyWorldbuilding/reedsyWorldbuildingConstants";
+import { CLR as UNITY_LD_CLR, STEPS as UNITY_LD_STEPS, TIPS as UNITY_LD_TIPS } from "./features/guides/unityLevelDesign/unityLevelDesignConstants";
 import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, STEPS as TETRAD_STEPS } from "./features/guides/tetrad/tetradConstants";
 import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
@@ -4306,12 +4307,9 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
   );
 }
 
-// ── UnityLDGuide helpers (outside to avoid remount) ──────────────────────────
-const LD_CLR='#34d399';
-
 // ── UnityLDGuide ──────────────────────────────────────────────────────────────
 function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
-  const CLR=LD_CLR;
+  const CLR=UNITY_LD_CLR;
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Level Design — '+project.name);
   const [editingTitle,setEditingTitle]=useState(false);
@@ -4358,16 +4356,7 @@ function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
   const [spawnSave,setSpawnSave]=useState('');
   const [sound,setSound]=useState('');
 
-  const STEPS=[
-    {label:'Conceito',icon:'💡'},
-    {label:'3Cs & Métricas',icon:'🎮'},
-    {label:'Paper Design',icon:'📐'},
-    {label:'Narrativa Ambiental',icon:'🌆'},
-    {label:'Player Pathing',icon:'🛤️'},
-    {label:'Mecânicas',icon:'🔁'},
-    {label:'Navegação',icon:'🔦'},
-    {label:'Compilar',icon:'✨'},
-  ];
+  const STEPS=UNITY_LD_STEPS;
   const TOTAL=STEPS.length;
 
   const filledSteps=[
@@ -4381,16 +4370,7 @@ function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
     false,
   ];
 
-  const TIPS=[
-    'Defina a visão coerente do nível — tema, período, estilo — e pesquise referências. Um nível coeso começa com clareza de identidade.',
-    'Os 3Cs (Câmera, Personagem, Controle) e as métricas definem o espaço jogável. Conheça antes de construir: velocidade, altura de salto, alcance de ação.',
-    'Esboce o nível em papel antes de construir. Mapeie puzzles, inimigos e mecânicas principais. Teste as mecânicas em um "gym" isolado.',
-    'Conte a história pelo ambiente — iluminação, props, grafites, destruição. Responda: por quê, o quê, onde, quando e como aconteceu aqui.',
-    'Mapeie o Caminho Crítico (mais longo possível) e o Caminho Dourado (mais divertido). Adicione caminhos secundários para estilos de jogo diferentes.',
-    'Use a Regra dos Três: o jogador deve praticar cada mecânica nova ao menos 3 vezes. Então subverta as expectativas para surpreendê-lo.',
-    'Guie o jogador com iluminação, bloqueadores físicos, sinalização e som. Controle onde ele olha e onde pode ir.',
-    'Revise o título e compile o documento. Você poderá continuar editando e expandindo com IA depois.',
-  ];
+  const TIPS=UNITY_LD_TIPS;
 
   const compile=()=>{
     let html='';
