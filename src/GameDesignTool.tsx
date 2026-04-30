@@ -9,6 +9,7 @@ import { CLR as OCTALYSIS_CLR, CDS as OCTALYSIS_CDS, GUIDE as OCTALYSIS_GUIDE, S
 import { AESTHETICS as MDA_AESTHETICS, CLR as MDA_CLR, GUIDE as MDA_GUIDE, STEPS as MDA_STEPS } from "./features/guides/mda/mdaConstants";
 import { CLR as PENS_CLR, COMPONENTS as PENS_COMPONENTS, GUIDE as PENS_GUIDE, STEPS as PENS_STEPS } from "./features/guides/pens/pensConstants";
 import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, STEPS as TETRAD_STEPS } from "./features/guides/tetrad/tetradConstants";
+import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
@@ -3108,26 +3109,9 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
 
 // ── LudonarrativeGuide ────────────────────────────────────────────────────────
 function LudonarrativeGuide({project,pData,setPData,onBack,onDocCreated}){
-  const CLR='#e879f9';
-
-  const STEPS=[
-    {id:'concept',      icon:'🎯', label:'Conceito'},
-    {id:'analysis',     icon:'🔍', label:'Análise'},
-    {id:'interactions', icon:'🔗', label:'Interações'},
-    {id:'synergy',      icon:'⚙️', label:'Sinergia'},
-    {id:'compile',      icon:'📄', label:'Compilar'},
-  ];
-
-  const GUIDE=[
-    {title:'O que é Harmonia Ludonarrativa?',
-     body:'Harmonia ludonarrativa é a interação sincronizada entre mecânicas e narrativa que cria uma história unificada (Ash & Despain, 2016). Quando bem executada, o jogador sente o que está fazendo em nível emocional — não apenas narrativo.\n\nDissonância ocorre quando mecânicas e narrativa não se sincronizam. Exemplo clássico: em Watch Dogs, o UI pedia ao jogador para fazer parkour sobre a tumba de um ente querido.\n\nComeçando: defina seu high concept e a abordagem narrativa do jogo — dirigida pelo designer (The Stanley Parable) ou pelo jogador (Journey).'},
-    {title:'Fase 1: Análise',
-     body:'Para cada mecânica do jogo, preencha 4 elementos que formam um loop ludonarrativo:\n\n① MECÂNICA — O que o jogador faz (verbo no gerúndio: andando, pulando...)\n② NARRATIVA — Por que faz aquilo (propósito diegético)\n③ CONTEXTO — Onde/como isso acontece no espaço de jogo\n④ EMOÇÃO — O que o jogador sente ao executar isso\n\nO loop fecha quando a emoção leva o jogador de volta à mecânica. Ex: "andando → explorar → ambiente desconhecido → mistério" — o mistério compele o jogador a continuar andando.'},
-    {title:'Fase 2: Interações',
-     body:'Os loops individuais se conectam para formar o game loop central. A transição do último elemento de um loop deve alimentar o próximo loop.\n\nEx: "ouvindo o Geiger Counter (descoberta, maravilha) → precisa pular para alcançar a runa (superar obstáculo, fiero)"\n\nIdentifique: qual é o loop segundo a segundo? E o loop momento a momento ao longo de toda uma sessão? Como o estado de sucesso de uma mecânica ativa a próxima?'},
-    {title:'Fase 3: Sinergia',
-     body:'Sinergia é quando os loops ludonarrativos funcionam dentro do contexto maior do jogo — sistemas e level design sustentam e amplificam os loops.\n\nCada mecânica precisa de um ou mais sistemas que suportem sua narrativa. Se um sistema não suporta a narrativa de uma mecânica, ele cria dissonância.\n\nNovos sistemas e mecânicas devem ser avaliados sempre: "este novo elemento quebra algum loop existente? Cria conflito de contexto com outra mecânica?"'},
-  ];
+  const CLR=LUDONARRATIVE_CLR;
+  const STEPS=LUDONARRATIVE_STEPS;
+  const GUIDE=LUDONARRATIVE_GUIDE;
 
   const AI_HINTS=[
     ['Qual abordagem narrativa combina melhor com '+project.genre+'?','Como definir um bom high concept para '+project.name+'?','Como identificar o tema central da experiência ludonarrativa?'],
