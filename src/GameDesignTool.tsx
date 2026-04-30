@@ -8,6 +8,7 @@ import { CLR as FOUR_KEYS_CLR, GUIDE as FOUR_KEYS_GUIDE, KEYS as FOUR_KEYS_KEYS,
 import { CLR as OCTALYSIS_CLR, CDS as OCTALYSIS_CDS, GUIDE as OCTALYSIS_GUIDE, STEPS as OCTALYSIS_STEPS } from "./features/guides/octalysis/octalysisConstants";
 import { AESTHETICS as MDA_AESTHETICS, CLR as MDA_CLR, GUIDE as MDA_GUIDE, STEPS as MDA_STEPS } from "./features/guides/mda/mdaConstants";
 import { CLR as PENS_CLR, COMPONENTS as PENS_COMPONENTS, GUIDE as PENS_GUIDE, STEPS as PENS_STEPS } from "./features/guides/pens/pensConstants";
+import { CLR as REEDSY_WB_CLR, STEPS as REEDSY_WB_STEPS } from "./features/guides/reedsyWorldbuilding/reedsyWorldbuildingConstants";
 import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, STEPS as TETRAD_STEPS } from "./features/guides/tetrad/tetradConstants";
 import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
@@ -3570,12 +3571,9 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
   );
 }
 
-// ── WorldbuildingGuide helpers (defined OUTSIDE to avoid remount on each render)
-const WB_CLR='#22d3ee';
-
 // ── WorldbuildingGuide ────────────────────────────────────────────────────────
 function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
-  const CLR=WB_CLR;
+  const CLR=REEDSY_WB_CLR;
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Worldbuilding — '+project.name);
 
@@ -3620,16 +3618,7 @@ function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
   const [law,setLaw]=useState('');
   const [warSystems,setWarSystems]=useState('');
 
-  const STEPS=[
-    {label:'Básico',icon:'🌍'},
-    {label:'Geografia',icon:'🗺️'},
-    {label:'Povos',icon:'👥'},
-    {label:'Civilização',icon:'🏛️'},
-    {label:'Magia & Tech',icon:'⚗️'},
-    {label:'Economia',icon:'💰'},
-    {label:'Política',icon:'⚖️'},
-    {label:'Compilar',icon:'✨'},
-  ];
+  const STEPS=REEDSY_WB_STEPS;
   const TOTAL=STEPS.length;
 
   const compile=()=>{
