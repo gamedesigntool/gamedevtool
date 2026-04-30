@@ -221,6 +221,18 @@ AI agents may:
 - explain when a new branch should be created
 - explain when a merge is appropriate
 
+Git naming ownership:
+
+- Codex may suggest branch names, commit messages, and PR titles/descriptions.
+- Final Git naming decisions should be reviewed by the project planning assistant / human developer.
+- Prefer the current architecture branch for this phase:
+  - feature/architecture-boundaries
+- Do not create tool-specific branch names such as:
+  - codex/*
+  - chatgpt/*
+  - copilot/*
+- Branch names should describe the work, not the tool that helped produce it.
+
 Branch naming should follow:
 
 <type>/<short-description>
