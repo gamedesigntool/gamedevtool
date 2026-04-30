@@ -13,6 +13,7 @@ import { CLR as UNITY_LD_CLR, STEPS as UNITY_LD_STEPS, TIPS as UNITY_LD_TIPS } f
 import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, STEPS as TETRAD_STEPS } from "./features/guides/tetrad/tetradConstants";
 import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
+import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, StatusKey, ViewKey } from "./domain/gameDesignToolTypes";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
@@ -24,53 +25,8 @@ declare global {
   }
 }
 
-type ProjectId = string | number;
-type DocumentId = string;
-type StatusKey = "progress" | "done";
 type ThemeKey = keyof typeof THEMES;
 type LangKey = keyof typeof TR;
-type ViewKey =
-  | "landing"
-  | "dashboard"
-  | "project"
-  | "module"
-  | "document"
-  | "brainstorming"
-  | "production"
-  | "flow-builder"
-  | "mda-guided"
-  | "double-a-guided"
-  | "fourkeys-guided"
-  | "colors-guided"
-  | "octalysis-guided"
-  | "pens-guided"
-  | "tetrad-guided"
-  | "ludonarrative-guided"
-  | "reedsy-wb-guided"
-  | "unity-ld-guided";
-
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-type Project = {
-  id: ProjectId;
-  name: string;
-  genre: string;
-  platform: string;
-  color: string;
-  emoji: string;
-  progress: number;
-};
-
-type ModuleMeta = {
-  id: string;
-  icon: string;
-  label: string;
-  color: string;
-  desc: string;
-};
 
 type FlowNode = {
   id: string;
@@ -101,18 +57,6 @@ type FlowDragging = { id: string; ox: number; oy: number } | null;
 type FlowConnecting = { fromId: string; fromPort: string; ax: number; ay: number; cx: number; cy: number } | null;
 type FlowPanning = { sx: number; sy: number; sp: CanvasPoint } | null;
 
-type Document = {
-  id: DocumentId;
-  title: string;
-  content: string;
-  messages?: ChatMessage[];
-  status: StatusKey;
-  createdAt: string;
-  updatedAt?: string | null;
-  framework?: string;
-  flowData?: FlowData;
-};
-
 type ProductionTask = {
   id: string;
   title: string;
@@ -140,23 +84,8 @@ type CanvasElement = {
   fontSize?: number;
 };
 
-type ProjectModuleData = {
-  docs?: Document[];
-  tasks?: ProductionTask[];
-  elements?: CanvasElement[];
-  strokes?: CanvasStroke[];
-};
-
-type DocumentModuleData = ProjectModuleData & { docs: Document[] };
-type ProjectData = {
-  [projectId: string]: Record<string, ProjectModuleData | undefined> | undefined;
-  [projectId: number]: Record<string, ProjectModuleData | undefined> | undefined;
-};
-type ConfirmState = { type: "delete" | "clone"; id: ProjectId } | { type: "deleteDoc"; id: DocumentId } | null;
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
 type InsertHtmlRef = { current: ((html: string) => void) | null };
-type ModeChoice = "choice" | null;
-type MechanicNewMode = "choice" | "frameworks" | null;
 type EditableDiv = HTMLDivElement & { _init?: boolean };
 
 // ── Fallback global para erros antes do React montar ─────────────────────────
