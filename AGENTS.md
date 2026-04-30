@@ -34,12 +34,16 @@ Do NOT simplify the product into:
 
 The project is in **architecture and foundation stage**.
 
+Current sub-phase:
+→ **Architecture Boundary Pass**
+
 Priorities:
 - understand existing prototype
 - improve structure and organization
 - reduce coupling
 - define domain models
-- prepare for Supabase integration
+- introduce architectural boundaries
+- prepare for Supabase integration (without implementing it yet)
 - create a maintainable base
 
 Non-priorities:
@@ -49,6 +53,35 @@ Non-priorities:
 
 When suggesting work:
 → prioritize structure over features
+
+---
+
+## Current Refactor Phase: Architecture Boundary Pass
+
+The goal of this phase is to create clear architectural boundaries before introducing Supabase.
+
+Key objectives:
+- map responsibilities still inside GameDesignTool.tsx
+- extract explicit domain types
+- introduce repository/service layers
+- move persistence behind clear boundaries
+- keep localStorage as the active persistence for now
+- prepare a clean migration path to Supabase
+
+Strict rules:
+- Do NOT add Supabase directly inside UI components
+- Do NOT replace persistence everywhere in a single change
+- Do NOT mix refactor + feature development
+- Do NOT introduce routing, auth, and persistence changes all at once
+- Do NOT perform large rewrites
+
+Recommended order:
+1. Map current responsibilities
+2. Extract domain types
+3. Introduce repository/service boundaries
+4. Move localStorage usage into repositories
+5. Extract hooks from GameDesignTool.tsx
+6. Only then plan Supabase integration
 
 ---
 
@@ -87,7 +120,7 @@ Guidelines:
   - UI (components)
   - state (hooks)
   - domain logic
-  - data access (services)
+  - data access (services / repositories)
 
 - Avoid mixing responsibilities in a single file
 
@@ -130,12 +163,20 @@ Guidelines:
 - Do not spread persistence logic across components
 
 - Introduce service/repository layers:
-  - projectService
-  - documentService
-  - aiService
+  - projectRepository
+  - documentRepository
+  - storageRepository
 
 - Keep storage strategy replaceable:
   - allow gradual migration from localStorage → Supabase
+
+- Current expected flow:
+
+UI → hooks → services/repositories → localStorage
+
+Future flow:
+
+UI → hooks → services/repositories → Supabase
 
 - Prefer clear entity modeling:
   - projects
@@ -158,6 +199,34 @@ Guidelines:
 - Do NOT:
   - mix refactor + feature work in the same change
   - introduce large architectural patterns all at once
+
+---
+
+## Git Workflow Rules
+
+The human developer is responsible for all Git operations.
+
+AI agents must NOT automatically:
+- create branches
+- commit changes
+- pull
+- push
+- merge
+- rebase
+
+AI agents may:
+- suggest branch names
+- suggest commit messages
+- suggest safe Git commands
+- explain when a new branch should be created
+- explain when a merge is appropriate
+
+For architecture, persistence, routing, or Supabase-related work:
+- recommend creating a feature branch
+- keep changes small and behavior-preserving
+- suggest commits grouped by responsibility
+
+The developer will execute Git commands manually.
 
 ---
 
