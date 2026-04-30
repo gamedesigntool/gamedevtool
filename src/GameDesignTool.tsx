@@ -14,6 +14,7 @@ import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, 
 import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, StatusKey, ViewKey } from "./domain/gameDesignToolTypes";
+import { setProjectModuleData } from "./domain/projectDataMutations";
 import { getProjectModuleData, getProjectModuleDocuments } from "./domain/projectDataSelectors";
 import { ECHOES_DEFAULT, PDATA_DEFAULT } from "./domain/projectDefaults";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
@@ -4999,7 +5000,7 @@ function GDDHubInner(){
   const getMod=(pId?: ProjectId | null,mId?: string | null): DocumentModuleData=>{
     return getProjectModuleData(pData,pId,mId);
   };
-  const setMod=(pId: ProjectId,mId: string,d: ProjectModuleData)=>setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:d}}));
+  const setMod=(pId: ProjectId,mId: string,d: ProjectModuleData)=>setPData(p=>setProjectModuleData(p,pId,mId,d));
   const modDocs=()=>getProjectModuleDocuments(pData,project?.id,module?.id);
 
   const buildCtx=(pId: ProjectId,mId: string,docId: DocumentId)=>{
