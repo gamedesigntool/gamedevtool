@@ -226,7 +226,16 @@ For architecture, persistence, routing, or Supabase-related work:
 - keep changes small and behavior-preserving
 - suggest commits grouped by responsibility
 
-The developer will execute Git commands manually.
+After each implementation or planning iteration, AI agents should suggest:
+
+- whether a new branch is recommended
+- a safe branch name, if applicable
+- suggested commit message(s)
+- whether the current change should be committed now or grouped with a later change
+- any validation command that should run before committing
+
+AI agents must still not execute Git commands automatically.
+The developer will manually run all Git operations.
 
 ---
 
