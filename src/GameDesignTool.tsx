@@ -15,6 +15,7 @@ import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONA
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { addDocumentToModule, deleteDocumentFromModule, renameDocumentInModule, toggleDocumentStatusInModule, updateDocumentContent } from "./domain/documentMutations";
 import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, StatusKey, ViewKey } from "./domain/gameDesignToolTypes";
+import { addProject, cloneProjectInList, createProjectEntity, removeProject } from "./domain/projectMutations";
 import { setProjectModuleData } from "./domain/projectDataMutations";
 import { getProjectModuleData, getProjectModuleDocuments } from "./domain/projectDataSelectors";
 import { ECHOES_DEFAULT, PDATA_DEFAULT } from "./domain/projectDefaults";
@@ -5014,9 +5015,9 @@ function GDDHubInner(){
   };
   const getDocMessages=(): ChatMessage[]=>!activeDoc||!project||!module?[]:getMod(project.id,module.id).docs.find(d=>d.id===activeDoc.id)?.messages||[];
 
-  const createProject=()=>{if(!form.name.trim())return;const idx=projects.length;setProjects(p=>[...p,{id:uid(),name:form.name,genre:form.genre||'Indefinido',platform:form.platform||'Indefinida',color:PALETTE[idx%PALETTE.length],emoji:EMOJIS[idx%EMOJIS.length],progress:0}]);setForm({name:'',genre:'',platform:''});setShowNew(false);};
-  const deleteProject=(id: ProjectId)=>{setProjects(p=>p.filter(x=>x.id!==id));setPData(d=>{const n={...d};delete n[id];return n;});setConfirm(null);};
-  const cloneProject=(id: ProjectId)=>{const src=projects.find(p=>p.id===id);if(!src)return;const idx=projects.length,nId=uid();setProjects(p=>[...p,{...src,id:nId,name:src.name+' (Cópia)',color:PALETTE[idx%PALETTE.length],emoji:EMOJIS[idx%EMOJIS.length],progress:0}]);setPData(d=>({...d,[nId]:JSON.parse(JSON.stringify(d[id]||{}))}));setConfirm(null);};
+  const createProject=()=>{if(!form.name.trim())return;const idx=projects.length;const project=createProjectEntity(form,uid(),PALETTE[idx%PALETTE.length],EMOJIS[idx%EMOJIS.length]);setProjects(p=>addProject(p,project));setForm({name:'',genre:'',platform:''});setShowNew(false);};
+  const deleteProject=(id: ProjectId)=>{setProjects(p=>removeProject(p,id));setPData(d=>{const n={...d};delete n[id];return n;});setConfirm(null);};
+  const cloneProject=(id: ProjectId)=>{const src=projects.find(p=>p.id===id);if(!src)return;const idx=projects.length,nId=uid();setProjects(p=>cloneProjectInList(p,id,nId,PALETTE[idx%PALETTE.length],EMOJIS[idx%EMOJIS.length]));setPData(d=>({...d,[nId]:JSON.parse(JSON.stringify(d[id]||{}))}));setConfirm(null);};
   const createDoc=()=>{
     if(!newDocTitle.trim()||!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
