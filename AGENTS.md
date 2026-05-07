@@ -34,22 +34,30 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ **Architecture Boundary Pass: Provider & Async Boundaries**
+→ **Render & State Stabilization Pass**
+
+Previous completed phases:
+- Data Extraction Pass
+- Architecture Boundary Pass
+- Provider & Async Boundaries Pass
 
 Current goals:
-- reduce provider coupling
-- isolate side effects
-- stabilize async flows
-- improve architectural boundaries
-- prepare for future Supabase integration
+- stabilize render/state coordination
+- improve ownership clarity
+- reduce implicit synchronization risks
+- improve async/render safety
 - preserve runtime behavior
+- prepare for future orchestration extraction
+- prepare groundwork for future Supabase adoption
 
 Current non-goals:
-- adding major features
 - introducing Supabase
-- auth/routing/global state
+- routing/global state
+- hooks extraction
 - large rewrites
-- premature optimization
+- generic controller layers
+- framework architectures
+- performance optimization passes
 
 ---
 
@@ -59,30 +67,16 @@ The original monolithic GameDesignTool.tsx has already gone through major extrac
 
 Already extracted:
 - domain types
-- default/seed data
-- project data selectors
-- project data mutations
-- document mutations
 - repositories
-- shared controls/components
+- mutation helpers
+- selectors
 - runtime/text/export utils
 - guide static constants
 - flow builder constants
 - kanban constants
 - document suggestions
-
-AI boundary already extracted:
 - aiMessageService
-- provider transport/parsing isolated from UI
-- Anthropic coupling centralized
-
-Current state:
-- GameDesignTool.tsx is now primarily:
-  - orchestration
-  - UI coordination
-  - async flows
-  - state ownership
-  - navigation/view coordination
+- imageGenerationService
 
 Current architecture:
 
@@ -94,93 +88,126 @@ services/repositories
 ↓
 providers/persistence
 
+Current state of GameDesignTool.tsx:
+- orchestration-heavy
+- render coordination-heavy
+- async coordination-heavy
+- still owns state/navigation behavior intentionally
+
+Current known sensitive areas:
+- activeDoc synchronization
+- pData ownership
+- render timing assumptions
+- navigation during async flows
+- persistence timing
+- editor transient state
+- guide chat duplication
+
 ---
 
 ## Current Priority
 
 The current architectural priorities are:
 
-1. isolate remaining provider coupling
-2. stabilize async behavior
-3. improve orchestration boundaries
-4. only then evaluate hooks/controllers
-5. only later prepare Supabase foundation
+1. stabilize render/state synchronization
+2. reduce implicit ownership assumptions
+3. improve async/render safety
+4. clarify persistence timing behavior
+5. only then evaluate hooks/controllers
+6. only later prepare Supabase foundation
 
 Reason:
-- hooks extraction before async/provider stabilization would only relocate complexity
-- provider boundaries must exist before orchestration extraction
-- async behavior must become safer before introducing async persistence
+- provider boundaries already exist
+- hooks extraction now risks moving unstable orchestration into hooks
+- ownership clarity must improve before orchestration extraction
 
 ---
 
-## AI Boundary Strategy
+## State Stabilization Philosophy
 
-Anthropic text/chat provider boundary is already implemented.
-
-Current rule:
-- prompts remain in UI/orchestration for now
-- orchestration remains in UI for now
-- provider transport/parsing belongs to services
-
-Do NOT:
-- redesign prompts during boundary passes
-- introduce multi-provider abstractions yet
-- introduce agent frameworks
-- generalize providers prematurely
-
-Current approved pattern:
-
-UI/orchestration
-↓
-service boundary
-↓
-provider transport/parsing
-
----
-
-## Image Generation Boundary Strategy
-
-Image generation providers must follow the same philosophy:
-- isolate provider transport
-- isolate provider-specific parsing
-- preserve orchestration
+Current philosophy:
+- stabilize before abstracting
+- preserve orchestration order
 - preserve runtime behavior
+- prefer explicit ownership
+- avoid broad state redesigns
+
+Current focus:
+- render safety
+- async/render coordination
+- state ownership clarity
+- navigation synchronization
+- persistence synchronization
 
 Do NOT:
-- redesign image workflows
-- introduce generic media frameworks
-- mix provider extraction with UI redesign
+- redesign the editor architecture yet
+- rewrite activeDoc globally
+- introduce global state
+- introduce giant hooks
+- move orchestration into controller layers
+
+---
+
+## activeDoc Strategy
+
+activeDoc is currently a sensitive coordination point.
+
+It currently acts simultaneously as:
+- navigation state
+- render source
+- editing source
+- persistence target
+- async reference
+
+This is known and intentional for now.
+
+Current strategy:
+- stabilize behavior first
+- reduce implicit assumptions incrementally
+- avoid broad redesigns
+
+Do NOT:
+- redesign activeDoc globally yet
+- split activeDoc into multiple systems yet
+- introduce synchronization frameworks
 
 ---
 
 ## Async Safety Strategy
 
-Async behavior is now a first-class architectural concern.
+Async behavior remains a first-class architectural concern.
 
 Known sensitive areas:
-- activeDoc synchronization
-- loading states
-- navigation during async requests
-- deletion during async requests
+- navigation during async operations
+- deletion during async operations
 - stale closures
-- guide chat async duplication
+- render synchronization during async updates
+- persistence ordering
+- editor state synchronization
 
 Current philosophy:
-- stabilize before abstracting
 - preserve orchestration order
+- prefer explicit snapshots before async boundaries
 - prefer small async safety improvements
-- avoid large async rewrites
+- avoid async framework abstractions
+
+Do NOT:
+- introduce generic async runners
+- introduce controller frameworks
+- introduce cancellation systems globally
+- introduce AbortController everywhere preemptively
 
 ---
 
 ## Hooks / Controllers Strategy
 
-Hooks extraction is intentionally postponed.
+Hooks extraction is STILL intentionally postponed.
 
 Hooks/controllers should only happen after:
-- provider boundaries stabilize
-- async risks are mapped
-- orchestration responsibilities become clearer
+- ownership becomes clearer
+- render/state synchronization stabilizes
+- async risks are better understood
+- orchestration responsibilities become cleaner
 
 Do NOT:
 - move orchestration chaos into hooks
@@ -199,10 +226,10 @@ Preferred future direction:
 Supabase is STILL NOT the current phase.
 
 Before Supabase:
-- provider boundaries must exist
-- async risks should already be understood
-- repositories should already isolate persistence
-- orchestration boundaries should be clearer
+- render/state synchronization must stabilize
+- async behavior must already be safer
+- repositories must already isolate persistence cleanly
+- orchestration responsibilities must become clearer
 
 Do NOT:
 - introduce Supabase directly into UI
@@ -295,15 +322,14 @@ AI agents may:
 - suggest safe Git commands
 
 Current branch strategy:
-- keep using:
-  - feature/architecture-boundaries
+- merge completed architecture phases into main
+- create one branch per major architectural phase
 
-Branch philosophy:
-- one branch per architectural phase
-- many small commits inside the branch
+Current active branch:
+- feature/render-state-stabilization
 
 Commit philosophy:
-- one safe extraction/refactor per commit
+- one safe stabilization/refactor per commit
 - preserve behavior
 - validate before commit
 
@@ -354,8 +380,9 @@ When implementing:
 - Do not introduce Supabase yet
 - Do not extract hooks prematurely
 - Do not introduce global state libraries yet
-- Do not redesign prompts during provider boundary extraction
-- Do not mix routing/auth/persistence together
+- Do not redesign activeDoc globally
+- Do not redesign orchestration globally
+- Do not introduce controller frameworks
 - Do not overengineer abstractions
 - Do not introduce generic framework layers
 
