@@ -34,14 +34,14 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ **Architecture Boundary Pass: Service Boundaries**
+→ **Architecture Boundary Pass: Provider & Async Boundaries**
 
 Current goals:
-- reduce coupling
+- reduce provider coupling
 - isolate side effects
-- introduce service boundaries
-- stabilize orchestration
-- prepare for Supabase integration later
+- stabilize async flows
+- improve architectural boundaries
+- prepare for future Supabase integration
 - preserve runtime behavior
 
 Current non-goals:
@@ -71,86 +71,143 @@ Already extracted:
 - kanban constants
 - document suggestions
 
+AI boundary already extracted:
+- aiMessageService
+- provider transport/parsing isolated from UI
+- Anthropic coupling centralized
+
 Current state:
 - GameDesignTool.tsx is now primarily:
   - orchestration
   - UI coordination
   - async flows
-  - AI interaction
   - state ownership
+  - navigation/view coordination
 
 Current architecture:
 
 UI/components
 ↓
-domain helpers
+orchestration/state
 ↓
-repositories/services
+services/repositories
 ↓
-localStorage
+providers/persistence
 
 ---
 
 ## Current Priority
 
-The current architectural priority is:
+The current architectural priorities are:
 
-→ create AI service boundaries before extracting hooks
+1. isolate remaining provider coupling
+2. stabilize async behavior
+3. improve orchestration boundaries
+4. only then evaluate hooks/controllers
+5. only later prepare Supabase foundation
 
 Reason:
-- hooks extraction right now would move:
-  - state
-  - navigation
-  - async flows
-  - side effects
-  together into new files without reducing coupling.
-
-The biggest remaining architectural violation is:
-→ direct AI provider coupling inside UI/orchestration.
+- hooks extraction before async/provider stabilization would only relocate complexity
+- provider boundaries must exist before orchestration extraction
+- async behavior must become safer before introducing async persistence
 
 ---
 
 ## AI Boundary Strategy
 
-Current strategy:
-- first isolate provider transport/fetch
-- then isolate response parsing
-- keep prompt construction in UI initially
-- preserve runtime behavior
-- preserve orchestration order
+Anthropic text/chat provider boundary is already implemented.
+
+Current rule:
+- prompts remain in UI/orchestration for now
+- orchestration remains in UI for now
+- provider transport/parsing belongs to services
 
 Do NOT:
-- rewrite the AI flow
-- redesign prompts
-- extract all AI logic at once
-- generalize prematurely
-- introduce agent frameworks
+- redesign prompts during boundary passes
 - introduce multi-provider abstractions yet
+- introduce agent frameworks
+- generalize providers prematurely
 
-Preferred incremental order:
+Current approved pattern:
 
-1. Extract provider fetch transport
-2. Extract response parsing
-3. Define typed request/response contracts
-4. Stabilize AI service boundary
-5. Only then consider hooks/controllers
+UI/orchestration
+↓
+service boundary
+↓
+provider transport/parsing
+
+---
+
+## Image Generation Boundary Strategy
+
+Image generation providers must follow the same philosophy:
+- isolate provider transport
+- isolate provider-specific parsing
+- preserve orchestration
+- preserve runtime behavior
+
+Do NOT:
+- redesign image workflows
+- introduce generic media frameworks
+- mix provider extraction with UI redesign
+
+---
+
+## Async Safety Strategy
+
+Async behavior is now a first-class architectural concern.
+
+Known sensitive areas:
+- activeDoc synchronization
+- loading states
+- navigation during async requests
+- deletion during async requests
+- stale closures
+- guide chat async duplication
+
+Current philosophy:
+- stabilize before abstracting
+- preserve orchestration order
+- prefer small async safety improvements
+- avoid large async rewrites
+
+---
+
+## Hooks / Controllers Strategy
+
+Hooks extraction is intentionally postponed.
+
+Hooks/controllers should only happen after:
+- provider boundaries stabilize
+- async risks are mapped
+- orchestration responsibilities become clearer
+
+Do NOT:
+- move orchestration chaos into hooks
+- create giant hooks
+- introduce controller layers prematurely
+
+Preferred future direction:
+- focused hooks
+- focused orchestration boundaries
+- isolated responsibilities only
 
 ---
 
 ## Supabase Strategy
 
-Supabase is NOT the current phase yet.
+Supabase is STILL NOT the current phase.
 
 Before Supabase:
-- service boundaries must exist
-- repositories must already isolate persistence
-- AI boundaries should already be stabilized
-- orchestration responsibilities should be clearer
+- provider boundaries must exist
+- async risks should already be understood
+- repositories should already isolate persistence
+- orchestration boundaries should be clearer
 
 Do NOT:
-- introduce Supabase directly inside UI
-- mix auth/routing/persistence in one phase
+- introduce Supabase directly into UI
 - replace localStorage globally in one step
+- mix auth/routing/persistence together
 
 Migration philosophy:
 → incremental coexistence, not big-bang replacement.
@@ -175,6 +232,7 @@ Prefer separation between:
 - services
 - repositories
 - persistence
+- provider transport
 
 Avoid:
 - giant reusable abstractions
@@ -194,34 +252,6 @@ Avoid:
 - Keep frontend/domain models explicit
 - Avoid loosely shaped objects
 - Prefer incremental typing improvements
-
----
-
-## AI Integration Rules
-
-AI must NOT be directly coupled to UI long-term.
-
-Target direction:
-
-UI
-↓
-orchestration
-↓
-AI service
-↓
-provider transport
-
-The first AI service boundary should:
-- preserve prompt construction in UI
-- move only:
-  - fetch
-  - transport
-  - response parsing
-
-Do NOT:
-- redesign prompts during boundary extraction
-- mix prompt refactor + service extraction
-- introduce provider abstraction layers yet
 
 ---
 
@@ -324,7 +354,7 @@ When implementing:
 - Do not introduce Supabase yet
 - Do not extract hooks prematurely
 - Do not introduce global state libraries yet
-- Do not redesign prompts during AI boundary extraction
+- Do not redesign prompts during provider boundary extraction
 - Do not mix routing/auth/persistence together
 - Do not overengineer abstractions
 - Do not introduce generic framework layers
