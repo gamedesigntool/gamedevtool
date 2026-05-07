@@ -23,6 +23,7 @@ import { getStoredProjectData, saveStoredProjectData } from "./repositories/proj
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
 import { sendAiMessage } from "./services/ai/aiMessageService";
+import { generateImageUrl } from "./services/image/imageGenerationService";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
 import { mdToHtml, stripHtml } from "./utils/gameDesignToolText";
@@ -147,12 +148,16 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
   const qState=(cmd: string)=>{try{return document.queryCommandState(cmd);}catch(e){return false;}};
   const handleClick=(e: MouseEvent<HTMLDivElement>)=>{if(e.target instanceof HTMLImageElement)setSelImg(e.target);else setSelImg(null);};
   const handleUpload=(e: ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const result=typeof r.result==='string'?r.result:'';if(!result)return;edRef.current?.focus();document.execCommand('insertHTML',false,'<br><img src="'+result+'" alt="'+f.name+'" style="max-width:100%;border-radius:8px;margin:8px 0;display:block"><br>');onChange(edRef.current?.innerHTML||'');};r.readAsDataURL(f);e.target.value='';};
-  const handleGenImg=()=>{
+  const handleGenImg=async()=>{
     if(!imgPrompt.trim())return;setGenLoading(true);
-    const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(imgPrompt)+'?width=640&height=360&nologo=true&seed='+Math.floor(Math.random()*99999);
-    const img=new Image();
-    img.onload=()=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<br><figure style="margin:12px 0;text-align:center"><img src="'+url+'" alt="'+imgPrompt+'" style="max-width:100%;border-radius:8px;display:block;margin:0 auto"><figcaption>'+imgPrompt+'</figcaption></figure><br>');onChange(el.innerHTML||'');setGenLoading(false);setImgModal(false);setImgPrompt('');};
-    img.onerror=()=>{setGenLoading(false);alert('Erro ao gerar. Tente outro prompt.');};img.src=url;
+    try{
+      const url=await generateImageUrl(imgPrompt);
+      const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<br><figure style="margin:12px 0;text-align:center"><img src="'+url+'" alt="'+imgPrompt+'" style="max-width:100%;border-radius:8px;display:block;margin:0 auto"><figcaption>'+imgPrompt+'</figcaption></figure><br>');onChange(el.innerHTML||'');setImgModal(false);setImgPrompt('');
+    }catch{
+      alert('Erro ao gerar. Tente outro prompt.');
+    }finally{
+      setGenLoading(false);
+    }
   };
   const TB=({label,title,cmd,active=false,onClick}:{label: string; title: string; cmd?: string; active?: boolean; onClick?: () => void})=><button title={title} onMouseDown={e=>{e.preventDefault();onClick?onClick():cmd&&exec(cmd);}} style={{background:active?color+'22':'none',border:'1px solid '+(active?color:'var(--gdd-border)'),color:active?color:'var(--gdd-dim)',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:active?700:400}}>{label}</button>;
   const imgHoverStyle='[contenteditable] img:hover{outline:2px solid '+hoverClr+'88}';
