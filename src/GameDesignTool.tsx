@@ -1281,8 +1281,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
@@ -1594,8 +1593,7 @@ Guie o usuário de forma prática, referenciando sempre o framework Colors of Ga
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
@@ -1973,8 +1971,7 @@ Guie com base no framework Octalysis. Foque em Human-Focused Design e no equilí
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
@@ -2364,8 +2361,7 @@ Guie com base em SDT e na pesquisa empírica de Ryan et al. (2006). Foque em com
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
@@ -2713,8 +2709,7 @@ Foque na HARMONIA entre os 4 elementos e em como cada um reforça o tema central
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
@@ -3106,8 +3101,7 @@ Responda em português brasileiro. Use exemplos de jogos conhecidos.`;
     setAiMsgs(m=>{const n=[...m];n[si]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[si]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
