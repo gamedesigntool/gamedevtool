@@ -493,9 +493,8 @@ Projeto: ${project.name} (${project.genre})
 
 Escreva 2 a 3 frases que capturem a essência do personagem — sua forma de agir, sua identidade narrativa e o que o torna único. Seja específico, evocativo e coeso. Sem títulos, apenas o texto descritivo.`;
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,messages:[{role:'user',content:prompt}]})});
-      const d=await r.json();
-      setConceito(d.content?.[0]?.text||'');
+      const reply=await sendAiMessage({messages:[{role:'user',content:prompt}],maxTokens:300,fallback:''});
+      setConceito(reply);
     }catch(e){console.error(e);}finally{setConceitoLoading(false);}
   };
 
