@@ -5049,26 +5049,27 @@ function GDDHubInner(){
 
   const send=async()=>{
     if(!input.trim()||loading||!project||!module||!activeDoc)return;
-    const pId=project.id,mId=module.id;
+    const projectId=project.id,moduleId=module.id,docId=activeDoc.id;
+    const projectName=project.name,moduleLabel=module.label,docTitle=activeDoc.title,contentSnapshot=editContent;
     const userMsg: ChatMessage={role:'user',content:input};
-    const currentMsgs: ChatMessage[]=[...(getMod(pId,mId).docs.find(d=>d.id===activeDoc.id)?.messages||[]),userMsg];
+    const currentMsgs: ChatMessage[]=[...(getMod(projectId,moduleId).docs.find(d=>d.id===docId)?.messages||[]),userMsg];
     setInput('');setLoading(true);
     setPData(prev=>{
-      const raw=prev?.[pId]?.[mId]||{};
+      const raw=prev?.[projectId]?.[moduleId]||{};
       const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
-      return{...prev,[pId]:{...(prev[pId]||{}),[mId]:{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,messages:currentMsgs}:d)}}};
+      return{...prev,[projectId]:{...(prev[projectId]||{}),[moduleId]:{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,messages:currentMsgs}:d)}}};
     });
-    const sys='Você é um assistente especialista em Game Design colaborando no documento "'+activeDoc.title+'" do módulo "'+module.label+'", projeto "'+project.name+'".\n\nCONTEÚDO ATUAL DO DOCUMENTO:\n'+(stripHtml(editContent).slice(0,900)||'{vazio}')+'\n\nCONTEXTO DO PROJETO:\n'+buildCtx(pId,mId,activeDoc.id)+'\n\nUse Markdown rico: **negrito**, # Título, ## Subtítulo, - listas. Seja detalhado e criativo. Responda em português brasileiro.';
+    const sys='Você é um assistente especialista em Game Design colaborando no documento "'+docTitle+'" do módulo "'+moduleLabel+'", projeto "'+projectName+'".\n\nCONTEÚDO ATUAL DO DOCUMENTO:\n'+(stripHtml(contentSnapshot).slice(0,900)||'{vazio}')+'\n\nCONTEXTO DO PROJETO:\n'+buildCtx(projectId,moduleId,docId)+'\n\nUse Markdown rico: **negrito**, # Título, ## Subtítulo, - listas. Seja detalhado e criativo. Responda em português brasileiro.';
     try{
       const reply=await sendAiMessage({system:sys,messages:currentMsgs,maxTokens:1200});
       const assistantMsg: ChatMessage={role:'assistant',content:reply};
       // Use functional updater again to avoid stale closure on the response write
       setPData(prev=>{
-        const raw=prev?.[pId]?.[mId]||{};
+        const raw=prev?.[projectId]?.[moduleId]||{};
         const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
-        const doc=curr.docs.find(d=>d.id===activeDoc.id);
+        const doc=curr.docs.find(d=>d.id===docId);
         const updatedMsgs=[...(doc?.messages||[]),assistantMsg];
-        return{...prev,[pId]:{...(prev[pId]||{}),[mId]:{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,messages:updatedMsgs}:d)}}};
+        return{...prev,[projectId]:{...(prev[projectId]||{}),[moduleId]:{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,messages:updatedMsgs}:d)}}};
       });
     }catch(e){console.error(e);}finally{setLoading(false);}
   };
