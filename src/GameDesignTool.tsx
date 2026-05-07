@@ -18,9 +18,9 @@ import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleDat
 import { setProjectModuleData } from "./domain/projectDataMutations";
 import { getProjectModuleData, getProjectModuleDocuments } from "./domain/projectDataSelectors";
 import { ECHOES_DEFAULT, PDATA_DEFAULT } from "./domain/projectDefaults";
+import { getStoredProjectData, saveStoredProjectData } from "./repositories/projectDataRepository";
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
-import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
 import { mdToHtml, stripHtml } from "./utils/gameDesignToolText";
@@ -4977,7 +4977,7 @@ function GDDHubInner(){
   const [view,setView]=useState<ViewKey>('landing');
   const [projects,setProjects]=useState<Project[]>(()=>getStoredProjects(ECHOES_DEFAULT));
   const [project,setProject]=useState<Project | null>(null),[module,setModule]=useState<ModuleMeta | null>(null),[activeDoc,setActiveDoc]=useState<Document | null>(null);
-  const [pData,setPData]=useState<ProjectData>(()=>lsGet(LS_KEYS.pData,PDATA_DEFAULT) as ProjectData);
+  const [pData,setPData]=useState<ProjectData>(()=>getStoredProjectData(PDATA_DEFAULT));
   const [editContent,setEditContent]=useState(''),[hasUnsaved,setHasUnsaved]=useState(false);
   const [input,setInput]=useState(''),[loading,setLoading]=useState(false);
   const [scrolled,setScrolled]=useState(false);
@@ -4998,7 +4998,7 @@ function GDDHubInner(){
   useEffect(()=>{saveStoredLang(lang);},[lang]);
   useEffect(()=>{saveStoredTheme(theme);},[theme]);
   useEffect(()=>{saveStoredProjects(projects);},[projects]);
-  useEffect(()=>{lsSet(LS_KEYS.pData,pData);},[pData]);
+  useEffect(()=>{saveStoredProjectData(pData);},[pData]);
 
   const getMod=(pId?: ProjectId | null,mId?: string | null): DocumentModuleData=>{
     return getProjectModuleData(pData,pId,mId);
