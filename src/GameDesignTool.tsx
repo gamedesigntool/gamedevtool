@@ -13,6 +13,7 @@ import { CLR as UNITY_LD_CLR, STEPS as UNITY_LD_STEPS, TIPS as UNITY_LD_TIPS } f
 import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, STEPS as TETRAD_STEPS } from "./features/guides/tetrad/tetradConstants";
 import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
+import { addDocumentToModule, deleteDocumentFromModule, renameDocumentInModule, toggleDocumentStatusInModule, updateDocumentContent } from "./domain/documentMutations";
 import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, StatusKey, ViewKey } from "./domain/gameDesignToolTypes";
 import { setProjectModuleData } from "./domain/projectDataMutations";
 import { getProjectModuleData, getProjectModuleDocuments } from "./domain/projectDataSelectors";
@@ -5018,31 +5019,31 @@ function GDDHubInner(){
     if(!newDocTitle.trim()||!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
     const doc: Document={id:uid(),title:newDocTitle.trim(),content:'',messages:[],status:'progress',createdAt:todayStr(),updatedAt:null};
-    setMod(pId,mId,{...curr,docs:[...(curr.docs||[]),doc]});
+    setMod(pId,mId,addDocumentToModule(curr,doc));
     setNewDocTitle('');setShowNewDoc(false);openDoc(doc);
   };
   const openDoc=(doc: Document)=>{setActiveDoc(doc);setEditContent(doc.content);setHasUnsaved(false);setView('document');};
   const saveDoc=()=>{
     if(!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId),now=todayStr();
-    setMod(pId,mId,{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,content:editContent,updatedAt:now}:d)});
+    setMod(pId,mId,updateDocumentContent(curr,activeDoc.id,editContent,now));
     setActiveDoc(d=>d?({...d,content:editContent,updatedAt:now}):d);setHasUnsaved(false);
   };
   const toggleStatus=(docId: DocumentId)=>{
     if(!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
-    setMod(pId,mId,{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,status:d.status==='progress'?'done':'progress'}:d)});
+    setMod(pId,mId,toggleDocumentStatusInModule(curr,docId));
     if(activeDoc?.id===docId)setActiveDoc(v=>v?({...v,status:v.status==='progress'?'done':'progress'}):v);
   };
   const deleteDoc=(docId: DocumentId)=>{
     if(!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
-    setMod(pId,mId,{...curr,docs:curr.docs.filter(d=>d.id!==docId)});setView('module');
+    setMod(pId,mId,deleteDocumentFromModule(curr,docId));setView('module');
   };
   const renameDoc=(title: string)=>{
     if(!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
-    setMod(pId,mId,{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,title}:d)});
+    setMod(pId,mId,renameDocumentInModule(curr,activeDoc.id,title));
     setActiveDoc(v=>v?({...v,title}):v);
   };
 
