@@ -296,8 +296,8 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
     setMsgs(nm);setChatIn('');setChatLoad(true);
     const sys='Você é um especialista em análise e benchmarking de jogos. Sua ÚNICA função é ajudar game designers a encontrar e analisar jogos de referência. Ao receber perguntas sobre mecânicas, gêneros ou estilos, forneça recomendações de 3-5 jogos com análise concisa de cada um (mecânicas-chave, público, diferenciais). Seja direto e útil. Responda SOMENTE sobre jogos e game design. Responda em português brasileiro.';
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:sys,messages:nm})});
-      const d=await r.json();setMsgs([...nm,{role:'assistant',content:d.content?.[0]?.text||'Erro.'}]);
+      const reply=await sendAiMessage({system:sys,messages:nm,maxTokens:800});
+      setMsgs([...nm,{role:'assistant',content:reply}]);
     }catch(err){console.error(err);}finally{setChatLoad(false);}
   };
 
