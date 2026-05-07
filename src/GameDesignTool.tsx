@@ -18,6 +18,7 @@ import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleDat
 import { setProjectModuleData } from "./domain/projectDataMutations";
 import { getProjectModuleData, getProjectModuleDocuments } from "./domain/projectDataSelectors";
 import { ECHOES_DEFAULT, PDATA_DEFAULT } from "./domain/projectDefaults";
+import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
 import { LS_KEYS, lsGet, lsSet } from "./services/localStorage";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
@@ -4957,8 +4958,8 @@ class GDTErrorBoundary extends Component {
 }
 
 function GDDHubInner(){
-  const [lang,setLang]=useState<LangKey>(()=>lsGet(LS_KEYS.lang,'pt') as LangKey);
-  const [theme,setTheme]=useState<ThemeKey>(()=>lsGet(LS_KEYS.theme,'dark') as ThemeKey);
+  const [lang,setLang]=useState<LangKey>(()=>getStoredLang('pt'));
+  const [theme,setTheme]=useState<ThemeKey>(()=>getStoredTheme('dark'));
   const t=TR[lang]||TR.pt;
   const th=THEMES[theme]||THEMES.dark;
   const S=mkS(th);
@@ -4993,8 +4994,8 @@ function GDDHubInner(){
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
 
   // ── Persistência em localStorage ──────────────────────────────────────────
-  useEffect(()=>{lsSet(LS_KEYS.lang,lang);},[lang]);
-  useEffect(()=>{lsSet(LS_KEYS.theme,theme);},[theme]);
+  useEffect(()=>{saveStoredLang(lang);},[lang]);
+  useEffect(()=>{saveStoredTheme(theme);},[theme]);
   useEffect(()=>{lsSet(LS_KEYS.projects,projects);},[projects]);
   useEffect(()=>{lsSet(LS_KEYS.pData,pData);},[pData]);
 
