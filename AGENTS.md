@@ -32,75 +32,128 @@ Do NOT simplify the product into:
 
 ## Current Phase
 
-The project is in **architecture and foundation stage**.
+The project is in:
 
-Current sub-phase:
-→ **Architecture Boundary Pass**
+→ **Architecture Boundary Pass: Service Boundaries**
 
-Priorities:
-- understand existing prototype
-- improve structure and organization
+Current goals:
 - reduce coupling
-- define domain models
-- introduce architectural boundaries
-- prepare for Supabase integration (without implementing it yet)
-- create a maintainable base
+- isolate side effects
+- introduce service boundaries
+- stabilize orchestration
+- prepare for Supabase integration later
+- preserve runtime behavior
 
-Non-priorities:
-- adding new features
+Current non-goals:
+- adding major features
+- introducing Supabase
+- auth/routing/global state
+- large rewrites
 - premature optimization
-- scaling concerns
-
-When suggesting work:
-→ prioritize structure over features
 
 ---
 
-## Current Refactor Phase: Architecture Boundary Pass
+## Current Architectural State
 
-The goal of this phase is to create clear architectural boundaries before introducing Supabase.
+The original monolithic GameDesignTool.tsx has already gone through major extraction passes.
 
-Key objectives:
-- map responsibilities still inside GameDesignTool.tsx
-- extract explicit domain types
-- introduce repository/service layers
-- move persistence behind clear boundaries
-- keep localStorage as the active persistence for now
-- prepare a clean migration path to Supabase
+Already extracted:
+- domain types
+- default/seed data
+- project data selectors
+- project data mutations
+- document mutations
+- repositories
+- shared controls/components
+- runtime/text/export utils
+- guide static constants
+- flow builder constants
+- kanban constants
+- document suggestions
 
-Strict rules:
-- Do NOT add Supabase directly inside UI components
-- Do NOT replace persistence everywhere in a single change
-- Do NOT mix refactor + feature development
-- Do NOT introduce routing, auth, and persistence changes all at once
-- Do NOT perform large rewrites
+Current state:
+- GameDesignTool.tsx is now primarily:
+  - orchestration
+  - UI coordination
+  - async flows
+  - AI interaction
+  - state ownership
 
-Recommended order:
-1. Map current responsibilities
-2. Extract domain types
-3. Introduce repository/service boundaries
-4. Move localStorage usage into repositories
-5. Extract hooks from GameDesignTool.tsx
-6. Only then plan Supabase integration
+Current architecture:
+
+UI/components
+↓
+domain helpers
+↓
+repositories/services
+↓
+localStorage
 
 ---
 
-## Current Codebase Reality
+## Current Priority
 
-The current system:
-- is a large React + TypeScript SPA
-- heavily relies on a single large TSX file
-- uses local component state extensively
-- uses manual view switching (no proper routing yet)
-- persists data via localStorage
-- mixes UI, state, and logic together
+The current architectural priority is:
 
-This is expected for a prototype.
+→ create AI service boundaries before extracting hooks
 
-Guidelines:
-- respect existing behavior
-- improve incrementally
-- do not propose full rewrites unless explicitly requested
+Reason:
+- hooks extraction right now would move:
+  - state
+  - navigation
+  - async flows
+  - side effects
+  together into new files without reducing coupling.
+
+The biggest remaining architectural violation is:
+→ direct AI provider coupling inside UI/orchestration.
+
+---
+
+## AI Boundary Strategy
+
+Current strategy:
+- first isolate provider transport/fetch
+- then isolate response parsing
+- keep prompt construction in UI initially
+- preserve runtime behavior
+- preserve orchestration order
+
+Do NOT:
+- rewrite the AI flow
+- redesign prompts
+- extract all AI logic at once
+- generalize prematurely
+- introduce agent frameworks
+- introduce multi-provider abstractions yet
+
+Preferred incremental order:
+
+1. Extract provider fetch transport
+2. Extract response parsing
+3. Define typed request/response contracts
+4. Stabilize AI service boundary
+5. Only then consider hooks/controllers
+
+---
+
+## Supabase Strategy
+
+Supabase is NOT the current phase yet.
+
+Before Supabase:
+- service boundaries must exist
+- repositories must already isolate persistence
+- AI boundaries should already be stabilized
+- orchestration responsibilities should be clearer
+
+Do NOT:
+- introduce Supabase directly inside UI
+- mix auth/routing/persistence in one phase
+- replace localStorage globally in one step
+
+Migration philosophy:
+→ incremental coexistence, not big-bang replacement.
 
 ---
 
@@ -111,94 +164,86 @@ Guidelines:
 - Prefer simple and maintainable solutions
 - Avoid overengineering
 - Favor clarity over cleverness
-- Build for one developer, not for enterprise scale
+- Build for one developer, not enterprise scale
 
 ### Structure
 
-- Prefer feature-based organization (modules) over generic folders
-- Separate:
-  - UI (components)
-  - state (hooks)
-  - domain logic
-  - data access (services / repositories)
+Prefer separation between:
+- UI
+- orchestration
+- domain logic
+- services
+- repositories
+- persistence
 
-- Avoid mixing responsibilities in a single file
+Avoid:
+- giant reusable abstractions
+- generic framework layers too early
+- architecture for hypothetical future problems
 
 ### State Management
 
-- Use local state for UI concerns
-- Use custom hooks for feature logic
-- Introduce global state only when truly needed
-- Avoid heavy state libraries unless justified
+- Local state is still acceptable
+- Avoid introducing global state libraries prematurely
+- Hooks should extract focused responsibilities only
+- Do not move orchestration chaos into hooks
 
 ### Data Modeling
 
-- Define explicit domain types (Project, Document, Section, etc.)
-- Do not rely on implicit or loosely shaped objects
-- Keep frontend models separate from database models
+- Define explicit domain types
+- Keep frontend/domain models explicit
+- Avoid loosely shaped objects
+- Prefer incremental typing improvements
 
 ---
 
 ## AI Integration Rules
 
-- AI must NOT be called directly from the frontend in production architecture
-- All AI interactions should go through backend boundaries (e.g., Edge Functions)
+AI must NOT be directly coupled to UI long-term.
 
-- Keep AI logic isolated:
-  - create an AI service layer
-  - define typed request/response contracts
+Target direction:
 
-- Do NOT couple UI components directly to:
-  - prompt construction
-  - provider-specific formats
-  - raw API calls
+UI
+↓
+orchestration
+↓
+AI service
+↓
+provider transport
 
-- AI is a capability, not the architecture
+The first AI service boundary should:
+- preserve prompt construction in UI
+- move only:
+  - fetch
+  - transport
+  - response parsing
 
----
-
-## Supabase & Persistence Rules
-
-- Design new data flows with Supabase in mind
-- Do not spread persistence logic across components
-
-- Introduce service/repository layers:
-  - projectRepository
-  - documentRepository
-  - storageRepository
-
-- Keep storage strategy replaceable:
-  - allow gradual migration from localStorage → Supabase
-
-- Current expected flow:
-
-UI → hooks → services/repositories → localStorage
-
-Future flow:
-
-UI → hooks → services/repositories → Supabase
-
-- Prefer clear entity modeling:
-  - projects
-  - documents
-  - sections
-  - (future) messages, tasks, canvas
+Do NOT:
+- redesign prompts during boundary extraction
+- mix prompt refactor + service extraction
+- introduce provider abstraction layers yet
 
 ---
 
 ## Refactoring Guidelines
 
-- Preserve behavior unless explicitly told otherwise
+- Preserve runtime behavior unless explicitly requested otherwise
 - Prefer extraction over rewriting
-- Break large components into smaller parts gradually
+- Prefer small commits
+- Prefer low-risk isolated changes
 
-- When refactoring:
-  - identify boundaries first
-  - extract components/hooks/services step-by-step
+When refactoring:
+1. identify responsibilities
+2. isolate boundaries
+3. move smallest safe unit first
+4. validate runtime
+5. commit
 
-- Do NOT:
-  - mix refactor + feature work in the same change
-  - introduce large architectural patterns all at once
+Avoid:
+- broad rewrites
+- mixing unrelated responsibilities
+- large async refactors
+- architectural "cleanup passes"
 
 ---
 
@@ -206,11 +251,11 @@ UI → hooks → services/repositories → Supabase
 
 The human developer is responsible for all Git operations.
 
-AI agents must NOT automatically:
+AI agents must NOT:
 - create branches
-- commit changes
-- pull
+- commit
 - push
+- pull
 - merge
 - rebase
 
@@ -218,164 +263,83 @@ AI agents may:
 - suggest branch names
 - suggest commit messages
 - suggest safe Git commands
-- explain when a new branch should be created
-- explain when a merge is appropriate
 
-Git naming ownership:
-
-- Codex may suggest branch names, commit messages, and PR titles/descriptions.
-- Final Git naming decisions should be reviewed by the project planning assistant / human developer.
-- Prefer the current architecture branch for this phase:
+Current branch strategy:
+- keep using:
   - feature/architecture-boundaries
-- Do not create tool-specific branch names such as:
-  - codex/*
-  - chatgpt/*
-  - copilot/*
-- Branch names should describe the work, not the tool that helped produce it.
 
-Branch naming should follow:
+Branch philosophy:
+- one branch per architectural phase
+- many small commits inside the branch
 
-<type>/<short-description>
-
-Where type is one of:
-- feature
-- refactor
-- bugfix
-- hotfix
-- docs
-- chore
-
-Branch strategy:
-
-- Prefer grouping related architectural changes into a single feature branch
-  (e.g., feature/architecture-boundaries)
-
-- Inside the branch:
-  - keep commits small and focused
-  - each commit should represent a safe, behavior-preserving step
-
-- Avoid creating overly granular branches for each small refactor step
-
-For architecture, persistence, routing, or Supabase-related work:
-- recommend creating a feature branch
-- keep changes small and behavior-preserving
-- suggest commits grouped by responsibility
-
-After each implementation or planning iteration, AI agents should suggest:
-
-- whether a new branch is recommended
-- a safe branch name, if applicable
-- suggested commit message(s)
-- whether the current change should be committed now or grouped with a later change
-- any validation command that should run before committing
-
-AI agents must still not execute Git commands automatically.
-The developer will manually run all Git operations.
+Commit philosophy:
+- one safe extraction/refactor per commit
+- preserve behavior
+- validate before commit
 
 ---
 
-## UX & Product Rules
+## Tech Stack
 
-- Preserve guided workflows
-- Avoid turning flows into generic text editing
-
-- Prioritize:
-  - clarity
-  - focus
-  - step-by-step guidance
-
-- Each feature should:
-  - help the user think better
-  - reduce cognitive load
-  - guide decisions
-
----
-
-## Business-Aware Guidance
-
-- Primary audience: solo indie developers
-- Secondary: small teams
-
-- Avoid:
-  - premature enterprise features
-  - complex permission systems early
-
-- Focus on:
-  - fast idea → structured output
-  - strong individual experience
-  - clear value in free usage
-
----
-
-## Tech Stack Preferences
-
-Preferred stack:
-- React + TypeScript
+Current:
+- React
+- TypeScript
 - Vite
+- localStorage
+- Cloudflare Pages
+
+Planned later:
+- Supabase
 - React Router
 - TanStack Query
-- Supabase client
 - Zod
-- Tailwind CSS
 
 Rules:
-- New libraries are allowed when:
-  - they are mature and widely adopted
-  - they clearly reduce complexity
-
-- Do NOT:
-  - add libraries for hypothetical problems
-  - introduce unnecessary abstractions
-
----
-
-## Decision-Making Behavior
-
-When working on a task:
-
-1. Understand context first
-2. Ask questions if needed
-3. Break the problem into steps
-4. Propose a simple approach
-5. Explain trade-offs when relevant
-6. Only then implement
+- avoid new dependencies unless clearly justified
+- prefer incremental adoption
+- avoid introducing infra before boundaries exist
 
 ---
 
 ## Response Style
 
-When analyzing or proposing changes, structure responses as:
-
+When analyzing:
 1. Current state
 2. Problems
-3. Proposed approach
-4. Practical next steps
+3. Proposed direction
+4. Risks
+5. Practical next steps
 
-For implementation:
-- explain where code goes
-- explain why decisions are made
+When implementing:
+1. Explanation
+2. Plan
+3. Code
+4. Notes / Risks
 
 ---
 
 ## DO NOT
 
-- Do not propose full rewrites by default
-- Do not overengineer
-- Do not treat this as a generic editor
-- Do not mix UI, domain logic, and persistence
-- Do not call AI providers directly from frontend
-- Do not introduce complexity without justification
-- Do not assume requirements that were not specified
+- Do not propose full rewrites
+- Do not introduce Supabase yet
+- Do not extract hooks prematurely
+- Do not introduce global state libraries yet
+- Do not redesign prompts during AI boundary extraction
+- Do not mix routing/auth/persistence together
+- Do not overengineer abstractions
+- Do not introduce generic framework layers
 
 ---
 
 ## Final Principle
 
-This project should evolve from:
-→ a working prototype
+This project should evolve:
+
+from:
+→ a working AI-assisted prototype
 
 into:
-→ a clean, modular, scalable foundation
+→ a modular, maintainable, scalable product foundation
 
 through:
-→ small, well-reasoned, incremental improvements
+→ small, safe, behavior-preserving architectural steps
