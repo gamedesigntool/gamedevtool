@@ -5055,14 +5055,11 @@ function GDDHubInner(){
     if(!input.trim()||loading||!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id;
     const userMsg: ChatMessage={role:'user',content:input};
-    // Use functional updater to avoid stale closure — reads current pData at update time
+    const currentMsgs: ChatMessage[]=[...(getMod(pId,mId).docs.find(d=>d.id===activeDoc.id)?.messages||[]),userMsg];
     setInput('');setLoading(true);
-    let currentMsgs: ChatMessage[]=[];
     setPData(prev=>{
       const raw=prev?.[pId]?.[mId]||{};
       const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
-      const doc=curr.docs.find(d=>d.id===activeDoc.id);
-      currentMsgs=[...(doc?.messages||[]),userMsg];
       return{...prev,[pId]:{...(prev[pId]||{}),[mId]:{...curr,docs:curr.docs.map(d=>d.id===activeDoc.id?{...d,messages:currentMsgs}:d)}}};
     });
     const sys='Você é um assistente especialista em Game Design colaborando no documento "'+activeDoc.title+'" do módulo "'+module.label+'", projeto "'+project.name+'".\n\nCONTEÚDO ATUAL DO DOCUMENTO:\n'+(stripHtml(editContent).slice(0,900)||'{vazio}')+'\n\nCONTEXTO DO PROJETO:\n'+buildCtx(pId,mId,activeDoc.id)+'\n\nUse Markdown rico: **negrito**, # Título, ## Subtítulo, - listas. Seja detalhado e criativo. Responda em português brasileiro.';
