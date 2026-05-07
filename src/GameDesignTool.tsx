@@ -515,8 +515,7 @@ Escreva 2 a 3 frases que capturem a essência do personagem — sua forma de agi
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:buildCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:buildCtx(),messages:curr,maxTokens:600});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
