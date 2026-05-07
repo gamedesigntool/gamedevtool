@@ -22,6 +22,7 @@ import { ECHOES_DEFAULT, PDATA_DEFAULT } from "./domain/projectDefaults";
 import { getStoredProjectData, saveStoredProjectData } from "./repositories/projectDataRepository";
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
+import { sendAiMessage } from "./services/ai/aiMessageService";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
 import { mdToHtml, stripHtml } from "./utils/gameDesignToolText";
@@ -5066,8 +5067,7 @@ function GDDHubInner(){
     });
     const sys='Você é um assistente especialista em Game Design colaborando no documento "'+activeDoc.title+'" do módulo "'+module.label+'", projeto "'+project.name+'".\n\nCONTEÚDO ATUAL DO DOCUMENTO:\n'+(stripHtml(editContent).slice(0,900)||'{vazio}')+'\n\nCONTEXTO DO PROJETO:\n'+buildCtx(pId,mId,activeDoc.id)+'\n\nUse Markdown rico: **negrito**, # Título, ## Subtítulo, - listas. Seja detalhado e criativo. Responda em português brasileiro.';
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:sys,messages:currentMsgs})});
-      const data=await r.json(),reply=data.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:sys,messages:currentMsgs,maxTokens:1200});
       const assistantMsg: ChatMessage={role:'assistant',content:reply};
       // Use functional updater again to avoid stale closure on the response write
       setPData(prev=>{
