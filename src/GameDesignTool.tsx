@@ -1018,8 +1018,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:getCtx(),messages:curr})});
-      const d=await r.json(),reply=d.content?.[0]?.text||'Erro.';
+      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
     }catch(e){console.error(e);}finally{setAiLoad(false);}
   };
