@@ -5026,12 +5026,14 @@ function GDDHubInner(){
   const saveDoc=()=>{
     if(!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId),now=todayStr();
+    if(!curr.docs.some(d=>d.id===activeDoc.id))return;
     setMod(pId,mId,updateDocumentContent(curr,activeDoc.id,editContent,now));
     setActiveDoc(d=>d?({...d,content:editContent,updatedAt:now}):d);setHasUnsaved(false);
   };
   const toggleStatus=(docId: DocumentId)=>{
     if(!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
+    if(!curr.docs.some(d=>d.id===docId))return;
     setMod(pId,mId,toggleDocumentStatusInModule(curr,docId));
     if(activeDoc?.id===docId)setActiveDoc(v=>v?({...v,status:v.status==='progress'?'done':'progress'}):v);
   };
@@ -5043,6 +5045,7 @@ function GDDHubInner(){
   const renameDoc=(title: string)=>{
     if(!project||!module||!activeDoc)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
+    if(!curr.docs.some(d=>d.id===activeDoc.id))return;
     setMod(pId,mId,renameDocumentInModule(curr,activeDoc.id,title));
     setActiveDoc(v=>v?({...v,title}):v);
   };
@@ -5052,7 +5055,9 @@ function GDDHubInner(){
     const projectId=project.id,moduleId=module.id,docId=activeDoc.id;
     const projectName=project.name,moduleLabel=module.label,docTitle=activeDoc.title,contentSnapshot=editContent;
     const userMsg: ChatMessage={role:'user',content:input};
-    const currentMsgs: ChatMessage[]=[...(getMod(projectId,moduleId).docs.find(d=>d.id===docId)?.messages||[]),userMsg];
+    const curr=getMod(projectId,moduleId),doc=curr.docs.find(d=>d.id===docId);
+    if(!doc)return;
+    const currentMsgs: ChatMessage[]=[...(doc.messages||[]),userMsg];
     setInput('');setLoading(true);
     setPData(prev=>{
       const raw=prev?.[projectId]?.[moduleId]||{};
