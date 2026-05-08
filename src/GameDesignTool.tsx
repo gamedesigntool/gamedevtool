@@ -96,6 +96,10 @@ type CanvasElement = {
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
 type InsertHtmlRef = { current: ((html: string) => void) | null };
 type EditableDiv = HTMLDivElement & { _init?: boolean };
+const GUIDED_VIEWS: ViewKey[]=[
+  'mda-guided','double-a-guided','fourkeys-guided','colors-guided','octalysis-guided',
+  'pens-guided','tetrad-guided','ludonarrative-guided','reedsy-wb-guided','unity-ld-guided',
+];
 
 // ── Fallback global para erros antes do React montar ─────────────────────────
 if(typeof window !== 'undefined'){
@@ -4991,6 +4995,7 @@ function GDDHubInner(){
 
   useEffect(()=>{const fn=()=>setScrolled(window.scrollY>30);window.addEventListener('scroll',fn);return()=>window.removeEventListener('scroll',fn);},[]);
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
+  useEffect(()=>{if(!project&&GUIDED_VIEWS.includes(view))setView('dashboard');},[project,view]);
 
   // ── Persistência em localStorage ──────────────────────────────────────────
   useEffect(()=>{saveStoredLang(lang);},[lang]);
@@ -5243,7 +5248,7 @@ function GDDHubInner(){
     <KanbanBoard project={project} pData={pData} setPData={setPData} onBack={()=>setView('project')}/>
   );
 
-  if(!project&&['mda-guided','double-a-guided','fourkeys-guided','colors-guided','octalysis-guided','pens-guided','tetrad-guided','ludonarrative-guided','reedsy-wb-guided','unity-ld-guided'].includes(view)){setView('dashboard');return null;}
+  if(!project&&GUIDED_VIEWS.includes(view))return null;
 
   if(view==='mda-guided')return(
     <MDAGuide project={project} pData={pData} setPData={setPData}
