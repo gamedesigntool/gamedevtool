@@ -5076,6 +5076,7 @@ function GDDHubInner(){
         const raw=prev?.[projectId]?.[moduleId]||{};
         const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
         const doc=curr.docs.find(d=>d.id===docId);
+        if(!doc)return prev;
         const updatedMsgs=[...(doc?.messages||[]),assistantMsg];
         return{...prev,[projectId]:{...(prev[projectId]||{}),[moduleId]:{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,messages:updatedMsgs}:d)}}};
       });
