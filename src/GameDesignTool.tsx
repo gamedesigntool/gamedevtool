@@ -5040,6 +5040,9 @@ function GDDHubInner(){
   const deleteDoc=(docId: DocumentId)=>{
     if(!project||!module)return;
     const pId=project.id,mId=module.id,curr=getMod(pId,mId);
+    if(activeDoc?.id===docId){
+      setActiveDoc(null);setEditContent('');setHasUnsaved(false);setInput('');
+    }
     setMod(pId,mId,deleteDocumentFromModule(curr,docId));setView('module');
   };
   const renameDoc=(title: string)=>{
