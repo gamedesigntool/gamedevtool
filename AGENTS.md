@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Post Document Actions Extraction Pass wrap-up
+→ Editor Orchestration Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -45,10 +45,11 @@ Previous completed phases:
 - Document Actions Extraction Pass
 
 Current goals:
-- understand the document model deeply
-- clarify ownership and lifecycle semantics
-- preserve the completed document actions extraction boundaries
-- define boundaries between persisted and transient state
+- understand editor responsibilities deeply
+- clarify draft lifecycle semantics
+- clarify save semantics
+- clarify unsaved state behavior
+- reduce editor orchestration complexity
 - prepare for future hooks extraction
 - prepare for future Supabase integration
 - avoid premature implementation
@@ -58,8 +59,10 @@ Current non-goals:
 - introducing routing/global state
 - broad hooks extraction
 - rewriting the editor
+- replacing contentEditable
+- implementing autosave
 - redesigning activeDoc immediately
-- large refactors without a clear architectural decision
+- large refactors without clear architectural decisions
 
 ---
 
@@ -75,7 +78,7 @@ Already extracted:
 - flow builder constants
 - kanban constants
 - document suggestions
-- document message mutation helper (`src/domain/documentMessageMutations.ts`)
+- document message mutation helpers
 - aiMessageService
 - imageGenerationService
 
@@ -94,12 +97,12 @@ GameDesignTool.tsx remains:
 - render coordination-heavy
 - async coordination-heavy
 
-This is intentional.
+DocEditor remains:
+- DOM-heavy
+- contentEditable-based
+- tightly coupled to draft lifecycle
 
-Document action status:
-- document chat message mutations were extracted to `src/domain/documentMessageMutations.ts`
-- `send()` remains in `GameDesignTool.tsx`
-- save, rename, status, and delete handlers remain in `GameDesignTool.tsx` because their domain cores already exist in `src/domain/documentMutations.ts` and the remaining code is React orchestration
+This is intentional.
 
 ---
 
@@ -107,26 +110,26 @@ Document action status:
 
 The current architectural priority is:
 
-→ Preserve document architecture semantics while planning the next small architectural step.
+→ Clarify editor orchestration and draft lifecycle semantics.
 
-See `docs/architecture/document-semantics.md` for the current mental contract of the document system.
-
-Main concepts under analysis:
-- pData
-- activeDoc
+Primary concepts under analysis:
+- DocEditor
 - editContent
 - hasUnsaved
-- project/module/view
+- activeDoc
+- save lifecycle
+- export behavior
+- contentEditable DOM state
 - editor transient state
-- persistence timing
 
 Key questions:
-- What is the source of truth?
 - What is persisted?
 - What is transient?
-- What is navigation state?
-- What is editing state?
-- What is an async snapshot?
+- What is draft state?
+- What triggers hasUnsaved?
+- What triggers save?
+- What data is used by export?
+- How does DOM state synchronize with React state?
 
 ---
 
@@ -135,40 +138,41 @@ Key questions:
 This phase is analysis-first.
 
 Preferred approach:
-- understand current responsibilities
-- map ownership
-- identify conflicts
-- evaluate future models
-- define a safe roadmap
+- understand responsibilities
+- map lifecycle
+- identify ownership conflicts
+- document semantics
+- implement only small safe steps when clearly justified
 
 This phase should be:
 - thoughtful
+- pragmatic
 - moderately ambitious
-- still pragmatic
 - anti-overengineering
 
 Not:
 - excessively conservative
 - reckless
-- implementation-driven
+- rewrite-driven
 
 ---
 
-## Document Architecture Focus
+## Editor Architecture Focus
 
 Areas to understand:
-- document lifecycle
+- editor initialization
 - editing lifecycle
+- draft synchronization
 - save lifecycle
-- async mutation flows
-- guide-generated documents
-- FlowBuilder documents
-- Canvas documents
-- export behavior
+- unsaved detection
+- export interaction
+- navigation interaction
+- async interaction
+- DOM ↔ React synchronization
 
 The objective is to define:
-- stable semantics
-- ownership boundaries
+- stable editor semantics
+- explicit ownership boundaries
 - future migration strategy
 
 ---
@@ -179,8 +183,9 @@ Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
 - document semantics are clear
+- editor semantics are clear
 - ownership boundaries are explicit
-- state responsibilities are better understood
+- responsibilities are better understood
 
 Preferred future direction:
 - focused hooks
@@ -195,6 +200,7 @@ Supabase is still NOT the current implementation target.
 
 Before Supabase:
 - document semantics must be understood
+- editor semantics must be understood
 - persistence boundaries must be explicit
 - state ownership must be clearer
 
@@ -271,7 +277,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/document-actions-extraction
+- feature/editor-orchestration
 
 ---
 
@@ -321,8 +327,9 @@ When implementing:
 - Do not propose full rewrites
 - Do not implement Supabase yet
 - Do not extract hooks prematurely
-- Do not redesign activeDoc immediately
+- Do not replace contentEditable
 - Do not introduce global state
+- Do not implement autosave yet
 - Do not overengineer abstractions
 - Do not create framework architectures
 
