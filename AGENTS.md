@@ -34,17 +34,20 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Document Architecture Planning Pass
+→ Post Document Actions Extraction Pass wrap-up
 
 Previous completed phases:
 - Data Extraction Pass
 - Architecture Boundary Pass
 - Provider & Async Boundaries Pass
 - Render & State Stabilization Pass
+- Document Architecture Planning Pass
+- Document Actions Extraction Pass
 
 Current goals:
 - understand the document model deeply
 - clarify ownership and lifecycle semantics
+- preserve the completed document actions extraction boundaries
 - define boundaries between persisted and transient state
 - prepare for future hooks extraction
 - prepare for future Supabase integration
@@ -72,6 +75,7 @@ Already extracted:
 - flow builder constants
 - kanban constants
 - document suggestions
+- document message mutation helper (`src/domain/documentMessageMutations.ts`)
 - aiMessageService
 - imageGenerationService
 
@@ -92,13 +96,18 @@ GameDesignTool.tsx remains:
 
 This is intentional.
 
+Document action status:
+- document chat message mutations were extracted to `src/domain/documentMessageMutations.ts`
+- `send()` remains in `GameDesignTool.tsx`
+- save, rename, status, and delete handlers remain in `GameDesignTool.tsx` because their domain cores already exist in `src/domain/documentMutations.ts` and the remaining code is React orchestration
+
 ---
 
 ## Current Priority
 
 The current architectural priority is:
 
-→ Clarify document architecture semantics before any major implementation.
+→ Preserve document architecture semantics while planning the next small architectural step.
 
 See `docs/architecture/document-semantics.md` for the current mental contract of the document system.
 
@@ -262,7 +271,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/document-architecture-planning
+- feature/document-actions-extraction
 
 ---
 
