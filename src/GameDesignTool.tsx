@@ -568,9 +568,12 @@ ${charImgUpload?`<hr><h2>🖼️ Imagem do Personagem</h2><figure style="margin:
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='characters',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='characters';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'double-a'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -1037,9 +1040,12 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='mechanics',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='mechanics';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'mda'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -1302,9 +1308,12 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='mechanics',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='mechanics';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'4keys'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -1619,9 +1628,12 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='mechanics',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='mechanics';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'colors'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -2001,9 +2013,12 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='mechanics',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='mechanics';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'octalysis'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -2387,9 +2402,12 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='mechanics',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='mechanics';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'pens'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -2736,9 +2754,12 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='mechanics',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='mechanics';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'tetrad'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -3213,9 +3234,12 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
   };
 
   const saveDoc=()=>{
-    const pId=project.id,mId='narrative',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='narrative';
     const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'ludonarrative'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
@@ -3622,9 +3646,12 @@ function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
       if(warSystems)  {html+=h3('Sistemas de Guerra'); html+=p(warSystems);}
     }
 
-    const pId=project.id,mId='worldbuilding',curr=pData?.[pId]?.[mId]||{docs:[]};
+    const pId=project.id,mId='worldbuilding';
     const doc={id:Math.random().toString(36).slice(2,9),title:docTitle.trim()||'Worldbuilding',content:html,messages:[],status:'progress',createdAt:new Date().toLocaleDateString('pt-BR'),updatedAt:null,framework:'reedsy-wb'};
-    setPData(p=>({...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}}));
+    setPData(p=>{
+      const curr=p?.[pId]?.[mId]||{docs:[]};
+      return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
+    });
     onDocCreated(doc);
   };
 
