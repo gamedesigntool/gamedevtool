@@ -100,6 +100,8 @@ The current architectural priority is:
 
 → Clarify document architecture semantics before any major implementation.
 
+See `docs/architecture/document-semantics.md` for the current mental contract of the document system.
+
 Main concepts under analysis:
 - pData
 - activeDoc
