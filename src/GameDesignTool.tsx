@@ -5339,7 +5339,7 @@ function GDDHubInner(){
 
   if(view==='flow-builder')return(
     !project?null:
-    <FlowBuilder project={project} pData={pData} setPData={setPData} doc={activeDoc} lang={lang}
+    <FlowBuilder key={`${project.id}:${activeDoc?.id ?? 'new'}`} project={project} pData={pData} setPData={setPData} doc={activeDoc} lang={lang}
       onBack={()=>{setView('module');setModule(getModuleById('flowcharts'));}}/>
   );
 
