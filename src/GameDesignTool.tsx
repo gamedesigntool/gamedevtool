@@ -13,6 +13,7 @@ import { CLR as UNITY_LD_CLR, STEPS as UNITY_LD_STEPS, TIPS as UNITY_LD_TIPS } f
 import { CLR as TETRAD_CLR, ELEMENTS as TETRAD_ELEMENTS, GUIDE as TETRAD_GUIDE, STEPS as TETRAD_STEPS } from "./features/guides/tetrad/tetradConstants";
 import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONARRATIVE_STEPS } from "./features/guides/ludonarrative/ludonarrativeConstants";
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
+import { appendDocumentMessageInProjectData, setDocumentMessagesInProjectData } from "./domain/documentMessageMutations";
 import { addDocumentToModule, deleteDocumentFromModule, renameDocumentInModule, toggleDocumentStatusInModule, updateDocumentContent } from "./domain/documentMutations";
 import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, StatusKey, ViewKey } from "./domain/gameDesignToolTypes";
 import { addProject, cloneProjectInList, createProjectEntity, removeProject } from "./domain/projectMutations";
@@ -5094,24 +5095,13 @@ function GDDHubInner(){
     if(!doc)return;
     const currentMsgs: ChatMessage[]=[...(doc.messages||[]),userMsg];
     setInput('');setLoading(true);
-    setPData(prev=>{
-      const raw=prev?.[projectId]?.[moduleId]||{};
-      const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
-      return{...prev,[projectId]:{...(prev[projectId]||{}),[moduleId]:{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,messages:currentMsgs}:d)}}};
-    });
+    setPData(prev=>setDocumentMessagesInProjectData(prev,projectId,moduleId,docId,currentMsgs));
     const sys='Você é um assistente especialista em Game Design colaborando no documento "'+docTitle+'" do módulo "'+moduleLabel+'", projeto "'+projectName+'".\n\nCONTEÚDO ATUAL DO DOCUMENTO:\n'+(stripHtml(contentSnapshot).slice(0,900)||'{vazio}')+'\n\nCONTEXTO DO PROJETO:\n'+buildCtx(projectId,moduleId,docId)+'\n\nUse Markdown rico: **negrito**, # Título, ## Subtítulo, - listas. Seja detalhado e criativo. Responda em português brasileiro.';
     try{
       const reply=await sendAiMessage({system:sys,messages:currentMsgs,maxTokens:1200});
       const assistantMsg: ChatMessage={role:'assistant',content:reply};
       // Use functional updater again to avoid stale closure on the response write
-      setPData(prev=>{
-        const raw=prev?.[projectId]?.[moduleId]||{};
-        const curr: DocumentModuleData={...raw,docs:raw.docs||[]};
-        const doc=curr.docs.find(d=>d.id===docId);
-        if(!doc)return prev;
-        const updatedMsgs=[...(doc?.messages||[]),assistantMsg];
-        return{...prev,[projectId]:{...(prev[projectId]||{}),[moduleId]:{...curr,docs:curr.docs.map(d=>d.id===docId?{...d,messages:updatedMsgs}:d)}}};
-      });
+      setPData(prev=>appendDocumentMessageInProjectData(prev,projectId,moduleId,docId,assistantMsg));
     }catch(e){console.error(e);}finally{setLoading(false);}
   };
   useEffect(()=>{chatRef.current?.scrollIntoView({behavior:'smooth'});},[pData,loading]);
