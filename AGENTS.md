@@ -34,44 +34,41 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ **Render & State Stabilization Pass**
+→ Document Architecture Planning Pass
 
 Previous completed phases:
 - Data Extraction Pass
 - Architecture Boundary Pass
 - Provider & Async Boundaries Pass
+- Render & State Stabilization Pass
 
 Current goals:
-- stabilize render/state coordination
-- improve ownership clarity
-- reduce implicit synchronization risks
-- improve async/render safety
-- preserve runtime behavior
-- prepare for future orchestration extraction
-- prepare groundwork for future Supabase adoption
+- understand the document model deeply
+- clarify ownership and lifecycle semantics
+- define boundaries between persisted and transient state
+- prepare for future hooks extraction
+- prepare for future Supabase integration
+- avoid premature implementation
 
 Current non-goals:
-- introducing Supabase
-- routing/global state
-- hooks extraction
-- large rewrites
-- generic controller layers
-- framework architectures
-- performance optimization passes
+- implementing Supabase
+- introducing routing/global state
+- broad hooks extraction
+- rewriting the editor
+- redesigning activeDoc immediately
+- large refactors without a clear architectural decision
 
 ---
 
 ## Current Architectural State
-
-The original monolithic GameDesignTool.tsx has already gone through major extraction passes.
 
 Already extracted:
 - domain types
 - repositories
 - mutation helpers
 - selectors
-- runtime/text/export utils
-- guide static constants
+- runtime/text/export utilities
+- guide constants
 - flow builder constants
 - kanban constants
 - document suggestions
@@ -88,153 +85,107 @@ services/repositories
 ↓
 providers/persistence
 
-Current state of GameDesignTool.tsx:
+GameDesignTool.tsx remains:
 - orchestration-heavy
 - render coordination-heavy
 - async coordination-heavy
-- still owns state/navigation behavior intentionally
 
-Current known sensitive areas:
-- activeDoc synchronization
-- pData ownership
-- render timing assumptions
-- navigation during async flows
-- persistence timing
-- editor transient state
-- guide chat duplication
+This is intentional.
 
 ---
 
 ## Current Priority
 
-The current architectural priorities are:
+The current architectural priority is:
 
-1. stabilize render/state synchronization
-2. reduce implicit ownership assumptions
-3. improve async/render safety
-4. clarify persistence timing behavior
-5. only then evaluate hooks/controllers
-6. only later prepare Supabase foundation
+→ Clarify document architecture semantics before any major implementation.
 
-Reason:
-- provider boundaries already exist
-- hooks extraction now risks moving unstable orchestration into hooks
-- ownership clarity must improve before orchestration extraction
+Main concepts under analysis:
+- pData
+- activeDoc
+- editContent
+- hasUnsaved
+- project/module/view
+- editor transient state
+- persistence timing
 
----
-
-## State Stabilization Philosophy
-
-Current philosophy:
-- stabilize before abstracting
-- preserve orchestration order
-- preserve runtime behavior
-- prefer explicit ownership
-- avoid broad state redesigns
-
-Current focus:
-- render safety
-- async/render coordination
-- state ownership clarity
-- navigation synchronization
-- persistence synchronization
-
-Do NOT:
-- redesign the editor architecture yet
-- rewrite activeDoc globally
-- introduce global state
-- introduce giant hooks
-- move orchestration into controller layers
+Key questions:
+- What is the source of truth?
+- What is persisted?
+- What is transient?
+- What is navigation state?
+- What is editing state?
+- What is an async snapshot?
 
 ---
 
-## activeDoc Strategy
+## Planning Philosophy
 
-activeDoc is currently a sensitive coordination point.
+This phase is analysis-first.
 
-It currently acts simultaneously as:
-- navigation state
-- render source
-- editing source
-- persistence target
-- async reference
+Preferred approach:
+- understand current responsibilities
+- map ownership
+- identify conflicts
+- evaluate future models
+- define a safe roadmap
 
-This is known and intentional for now.
+This phase should be:
+- thoughtful
+- moderately ambitious
+- still pragmatic
+- anti-overengineering
 
-Current strategy:
-- stabilize behavior first
-- reduce implicit assumptions incrementally
-- avoid broad redesigns
-
-Do NOT:
-- redesign activeDoc globally yet
-- split activeDoc into multiple systems yet
-- introduce synchronization frameworks
+Not:
+- excessively conservative
+- reckless
+- implementation-driven
 
 ---
 
-## Async Safety Strategy
+## Document Architecture Focus
 
-Async behavior remains a first-class architectural concern.
+Areas to understand:
+- document lifecycle
+- editing lifecycle
+- save lifecycle
+- async mutation flows
+- guide-generated documents
+- FlowBuilder documents
+- Canvas documents
+- export behavior
 
-Known sensitive areas:
-- navigation during async operations
-- deletion during async operations
-- stale closures
-- render synchronization during async updates
-- persistence ordering
-- editor state synchronization
-
-Current philosophy:
-- preserve orchestration order
-- prefer explicit snapshots before async boundaries
-- prefer small async safety improvements
-- avoid async framework abstractions
-
-Do NOT:
-- introduce generic async runners
-- introduce controller frameworks
-- introduce cancellation systems globally
-- introduce AbortController everywhere preemptively
+The objective is to define:
+- stable semantics
+- ownership boundaries
+- future migration strategy
 
 ---
 
 ## Hooks / Controllers Strategy
 
-Hooks extraction is STILL intentionally postponed.
+Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
-- ownership becomes clearer
-- render/state synchronization stabilizes
-- async risks are better understood
-- orchestration responsibilities become cleaner
-
-Do NOT:
-- move orchestration chaos into hooks
-- create giant hooks
-- introduce controller layers prematurely
+- document semantics are clear
+- ownership boundaries are explicit
+- state responsibilities are better understood
 
 Preferred future direction:
 - focused hooks
 - focused orchestration boundaries
-- isolated responsibilities only
+- explicit responsibilities
 
 ---
 
 ## Supabase Strategy
 
-Supabase is STILL NOT the current phase.
+Supabase is still NOT the current implementation target.
 
 Before Supabase:
-- render/state synchronization must stabilize
-- async behavior must already be safer
-- repositories must already isolate persistence cleanly
-- orchestration responsibilities must become clearer
-
-Do NOT:
-- introduce Supabase directly into UI
-- replace localStorage globally in one step
-- mix auth/routing/persistence together
+- document semantics must be understood
+- persistence boundaries must be explicit
+- state ownership must be clearer
 
 Migration philosophy:
 → incremental coexistence, not big-bang replacement.
@@ -261,23 +212,16 @@ Prefer separation between:
 - persistence
 - provider transport
 
-Avoid:
-- giant reusable abstractions
-- generic framework layers too early
-- architecture for hypothetical future problems
-
 ### State Management
 
 - Local state is still acceptable
-- Avoid introducing global state libraries prematurely
+- Avoid global state prematurely
 - Hooks should extract focused responsibilities only
-- Do not move orchestration chaos into hooks
 
 ### Data Modeling
 
 - Define explicit domain types
 - Keep frontend/domain models explicit
-- Avoid loosely shaped objects
 - Prefer incremental typing improvements
 
 ---
@@ -285,22 +229,16 @@ Avoid:
 ## Refactoring Guidelines
 
 - Preserve runtime behavior unless explicitly requested otherwise
-- Prefer extraction over rewriting
+- Prefer analysis before implementation
 - Prefer small commits
 - Prefer low-risk isolated changes
 
-When refactoring:
+When implementing:
 1. identify responsibilities
 2. isolate boundaries
-3. move smallest safe unit first
+3. move the smallest safe unit
 4. validate runtime
 5. commit
-
-Avoid:
-- broad rewrites
-- mixing unrelated responsibilities
-- large async refactors
-- architectural "cleanup passes"
 
 ---
 
@@ -321,17 +259,8 @@ AI agents may:
 - suggest commit messages
 - suggest safe Git commands
 
-Current branch strategy:
-- merge completed architecture phases into main
-- create one branch per major architectural phase
-
 Current active branch:
-- feature/render-state-stabilization
-
-Commit philosophy:
-- one safe stabilization/refactor per commit
-- preserve behavior
-- validate before commit
+- feature/document-architecture-planning
 
 ---
 
@@ -353,7 +282,7 @@ Planned later:
 Rules:
 - avoid new dependencies unless clearly justified
 - prefer incremental adoption
-- avoid introducing infra before boundaries exist
+- avoid introducing infrastructure before boundaries exist
 
 ---
 
@@ -361,10 +290,12 @@ Rules:
 
 When analyzing:
 1. Current state
-2. Problems
-3. Proposed direction
+2. Ownership map
+3. Problems
 4. Risks
-5. Practical next steps
+5. Candidate models
+6. Recommended direction
+7. Practical next steps
 
 When implementing:
 1. Explanation
@@ -377,14 +308,12 @@ When implementing:
 ## DO NOT
 
 - Do not propose full rewrites
-- Do not introduce Supabase yet
+- Do not implement Supabase yet
 - Do not extract hooks prematurely
-- Do not introduce global state libraries yet
-- Do not redesign activeDoc globally
-- Do not redesign orchestration globally
-- Do not introduce controller frameworks
+- Do not redesign activeDoc immediately
+- Do not introduce global state
 - Do not overengineer abstractions
-- Do not introduce generic framework layers
+- Do not create framework architectures
 
 ---
 
@@ -399,4 +328,4 @@ into:
 → a modular, maintainable, scalable product foundation
 
 through:
-→ small, safe, behavior-preserving architectural steps
+→ thoughtful, incremental, behavior-preserving architectural decisions
