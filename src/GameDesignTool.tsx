@@ -5267,7 +5267,7 @@ function GDDHubInner(){
 
   if(view==='brainstorming')return(
     !project?null:
-    <CanvasBoard project={project} pData={pData} setPData={setPData} onBack={()=>setView('project')}/>
+    <CanvasBoard key={project.id} project={project} pData={pData} setPData={setPData} onBack={()=>setView('project')}/>
   );
 
   if(view==='production')return(
