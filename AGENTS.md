@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Document Product Decisions Pass
+→ Editor Sync Hardening Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -44,24 +44,29 @@ Previous completed phases:
 - Document Architecture Planning Pass
 - Document Actions Extraction Pass
 - Editor Orchestration Pass
+- Document Product Decisions Pass
 
 Current goals:
-- make explicit product decisions about document behavior
-- define the intended semantics of drafts and saving
-- remove ambiguity before structural refactors
-- prepare for future editor hooks
-- prepare for future Supabase integration
-- avoid premature implementation
+- harden synchronization between DOM mutations and React draft state
+- ensure editContent remains the canonical in-memory textual draft
+- ensure hasUnsaved is updated consistently
+- reduce hidden editor synchronization gaps
+- prepare safe foundations for future navigation guard
+- prepare safe foundations for future export warning
+- prepare safe foundations for future hooks extraction
+- prepare safe foundations for future Supabase integration
 
 Current non-goals:
+- implementing autosave
+- implementing navigation guard
+- implementing export warning
 - implementing Supabase
 - introducing routing/global state
 - broad hooks extraction
 - rewriting the editor
 - replacing contentEditable
-- implementing autosave
 - redesigning activeDoc immediately
-- large refactors without explicit decisions
+- large refactors without explicit justification
 
 ---
 
@@ -108,6 +113,11 @@ GameDesignTool.tsx remains:
 - render coordination-heavy
 - async coordination-heavy
 
+DocEditor remains:
+- DOM-heavy
+- contentEditable-based
+- tightly coupled to draft lifecycle
+
 This is intentional.
 
 ---
@@ -116,47 +126,30 @@ This is intentional.
 
 The current architectural priority is:
 
-→ Make explicit product and architecture decisions about document behavior before major refactors.
+→ Strengthen synchronization between DOM mutations, editContent, and hasUnsaved.
 
-Primary decision areas:
-- navigation vs unsaved drafts
-- export vs unsaved drafts
-- hasUnsaved semantics
-- activeDoc semantics
-- async document scoping
-- future autosave assumptions
+Primary synchronization path:
 
----
+DOM mutations
+↓
+editContent
+↓
+hasUnsaved
 
-## Decision-Making Philosophy
-
-This phase is decision-first.
-
-Preferred approach:
-1. identify open questions
-2. analyze tradeoffs
-3. recommend explicit decisions
-4. document the decisions
-5. only then consider implementation
-
-This phase should be:
-- thoughtful
-- pragmatic
-- moderately ambitious
-- anti-overengineering
-
-Not:
-- excessively conservative
-- reckless
-- implementation-driven
+Key questions:
+- Which mutation paths alter the editor DOM?
+- Which paths already synchronize draft state?
+- Which paths leave editContent stale?
+- Which paths leave hasUnsaved stale?
+- What is the smallest safe hardening pass?
 
 ---
 
-## Document Semantics Focus
+## Editor Semantics Focus
 
 Core concepts:
 - pData.docs (persisted source of truth)
-- editContent (volatile draft)
+- editContent (canonical in-memory textual draft)
 - activeDoc (operational snapshot)
 - hasUnsaved (session dirty flag, not a reliable diff proof)
 - contentEditable DOM state
@@ -168,7 +161,30 @@ Formalized decisions / future directions:
 - activeDoc: currently an operational snapshot; future direction may move toward activeDocId plus derived selected document
 - async workflows: message persistence is scoped by captured project/module/document ids; global loading remains a known limitation
 - autosave: still a non-goal and requires stronger DOM sync, reliable dirty state, document scoping, and conflict strategy first
-- likely future implementation theme: Editor Sync Hardening Pass
+
+---
+
+## Planning Philosophy
+
+This phase is implementation-light and behavior-preserving.
+
+Preferred approach:
+1. map all editor mutation paths
+2. identify synchronization gaps
+3. classify risks
+4. implement the smallest safe hardening
+5. validate runtime behavior
+
+This phase should be:
+- focused
+- pragmatic
+- low-risk
+- anti-overengineering
+
+Not:
+- rewrite-driven
+- abstraction-heavy
+- feature-driven
 
 ---
 
@@ -179,7 +195,7 @@ Hooks extraction remains postponed.
 Hooks/controllers should only happen after:
 - product decisions are explicit
 - document semantics are stable
-- editor semantics are stable
+- editor synchronization is reliable
 - ownership boundaries are explicit
 
 Preferred future direction:
@@ -197,6 +213,7 @@ Before Supabase:
 - document semantics must be explicit
 - editor semantics must be explicit
 - product decisions must be documented
+- dirty state must be reliable
 - persistence boundaries must be clear
 
 Migration philosophy:
@@ -241,16 +258,15 @@ Prefer separation between:
 ## Refactoring Guidelines
 
 - Preserve runtime behavior unless explicitly requested otherwise
-- Prefer decisions before implementation
+- Prefer targeted hardening over broad refactors
 - Prefer small commits
 - Prefer low-risk isolated changes
 
 When implementing:
 1. identify responsibilities
-2. isolate boundaries
-3. move the smallest safe unit
-4. validate runtime
-5. commit
+2. isolate the smallest safe unit
+3. validate runtime
+4. commit
 
 ---
 
@@ -272,7 +288,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/document-product-decisions
+- feature/editor-sync-hardening
 
 ---
 
@@ -302,8 +318,8 @@ Rules:
 
 When analyzing:
 1. Current state
-2. Open questions
-3. Tradeoffs
+2. Ownership map
+3. Synchronization paths
 4. Risks
 5. Recommendation
 6. Practical next steps
@@ -319,11 +335,13 @@ When implementing:
 ## DO NOT
 
 - Do not propose full rewrites
+- Do not implement autosave
+- Do not implement navigation guard
+- Do not implement export warning
 - Do not implement Supabase yet
 - Do not extract hooks prematurely
 - Do not replace contentEditable
 - Do not introduce global state
-- Do not implement autosave yet
 - Do not overengineer abstractions
 - Do not create framework architectures
 
