@@ -158,15 +158,17 @@ Core concepts:
 - pData.docs (persisted source of truth)
 - editContent (volatile draft)
 - activeDoc (operational snapshot)
-- hasUnsaved (draft divergence indicator)
+- hasUnsaved (session dirty flag, not a reliable diff proof)
 - contentEditable DOM state
 
-Open questions:
-- Should navigation warn before discarding drafts?
-- Should export include unsaved drafts?
-- Should hasUnsaved remain a stored flag?
-- Should activeDoc remain a snapshot?
-- Should AI workflows become document-scoped?
+Formalized decisions / future directions:
+- navigation: manual save remains current behavior; future direction is a navigation guard for unsaved textual drafts
+- export: export remains based on persisted pData.docs content; future UX should warn or offer save-before-export
+- hasUnsaved: currently a session dirty flag, not a reliable diff proof, and must not be persisted to storage or Supabase
+- activeDoc: currently an operational snapshot; future direction may move toward activeDocId plus derived selected document
+- async workflows: message persistence is scoped by captured project/module/document ids; global loading remains a known limitation
+- autosave: still a non-goal and requires stronger DOM sync, reliable dirty state, document scoping, and conflict strategy first
+- likely future implementation theme: Editor Sync Hardening Pass
 
 ---
 
