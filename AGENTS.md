@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Editor Orchestration Pass
+→ Document Product Decisions Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -43,14 +43,13 @@ Previous completed phases:
 - Render & State Stabilization Pass
 - Document Architecture Planning Pass
 - Document Actions Extraction Pass
+- Editor Orchestration Pass
 
 Current goals:
-- understand editor responsibilities deeply
-- clarify draft lifecycle semantics
-- clarify save semantics
-- clarify unsaved state behavior
-- reduce editor orchestration complexity
-- prepare for future hooks extraction
+- make explicit product decisions about document behavior
+- define the intended semantics of drafts and saving
+- remove ambiguity before structural refactors
+- prepare for future editor hooks
 - prepare for future Supabase integration
 - avoid premature implementation
 
@@ -62,7 +61,19 @@ Current non-goals:
 - replacing contentEditable
 - implementing autosave
 - redesigning activeDoc immediately
-- large refactors without clear architectural decisions
+- large refactors without explicit decisions
+
+---
+
+## Canonical Architecture Documents
+
+The following documents are the source of truth for current document/editor semantics:
+
+- docs/architecture/document-semantics.md
+- docs/architecture/editor-orchestration.md
+- docs/architecture/editor-sync-risks.md
+
+These documents must be consulted before proposing structural changes.
 
 ---
 
@@ -97,11 +108,6 @@ GameDesignTool.tsx remains:
 - render coordination-heavy
 - async coordination-heavy
 
-DocEditor remains:
-- DOM-heavy
-- contentEditable-based
-- tightly coupled to draft lifecycle
-
 This is intentional.
 
 ---
@@ -110,39 +116,28 @@ This is intentional.
 
 The current architectural priority is:
 
-→ Clarify editor orchestration and draft lifecycle semantics.
+→ Make explicit product and architecture decisions about document behavior before major refactors.
 
-Primary concepts under analysis:
-- DocEditor
-- editContent
-- hasUnsaved
-- activeDoc
-- save lifecycle
-- export behavior
-- contentEditable DOM state
-- editor transient state
-
-Key questions:
-- What is persisted?
-- What is transient?
-- What is draft state?
-- What triggers hasUnsaved?
-- What triggers save?
-- What data is used by export?
-- How does DOM state synchronize with React state?
+Primary decision areas:
+- navigation vs unsaved drafts
+- export vs unsaved drafts
+- hasUnsaved semantics
+- activeDoc semantics
+- async document scoping
+- future autosave assumptions
 
 ---
 
-## Planning Philosophy
+## Decision-Making Philosophy
 
-This phase is analysis-first.
+This phase is decision-first.
 
 Preferred approach:
-- understand responsibilities
-- map lifecycle
-- identify ownership conflicts
-- document semantics
-- implement only small safe steps when clearly justified
+1. identify open questions
+2. analyze tradeoffs
+3. recommend explicit decisions
+4. document the decisions
+5. only then consider implementation
 
 This phase should be:
 - thoughtful
@@ -153,27 +148,25 @@ This phase should be:
 Not:
 - excessively conservative
 - reckless
-- rewrite-driven
+- implementation-driven
 
 ---
 
-## Editor Architecture Focus
+## Document Semantics Focus
 
-Areas to understand:
-- editor initialization
-- editing lifecycle
-- draft synchronization
-- save lifecycle
-- unsaved detection
-- export interaction
-- navigation interaction
-- async interaction
-- DOM ↔ React synchronization
+Core concepts:
+- pData.docs (persisted source of truth)
+- editContent (volatile draft)
+- activeDoc (operational snapshot)
+- hasUnsaved (draft divergence indicator)
+- contentEditable DOM state
 
-The objective is to define:
-- stable editor semantics
-- explicit ownership boundaries
-- future migration strategy
+Open questions:
+- Should navigation warn before discarding drafts?
+- Should export include unsaved drafts?
+- Should hasUnsaved remain a stored flag?
+- Should activeDoc remain a snapshot?
+- Should AI workflows become document-scoped?
 
 ---
 
@@ -182,10 +175,10 @@ The objective is to define:
 Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
-- document semantics are clear
-- editor semantics are clear
+- product decisions are explicit
+- document semantics are stable
+- editor semantics are stable
 - ownership boundaries are explicit
-- responsibilities are better understood
 
 Preferred future direction:
 - focused hooks
@@ -199,10 +192,10 @@ Preferred future direction:
 Supabase is still NOT the current implementation target.
 
 Before Supabase:
-- document semantics must be understood
-- editor semantics must be understood
-- persistence boundaries must be explicit
-- state ownership must be clearer
+- document semantics must be explicit
+- editor semantics must be explicit
+- product decisions must be documented
+- persistence boundaries must be clear
 
 Migration philosophy:
 → incremental coexistence, not big-bang replacement.
@@ -246,7 +239,7 @@ Prefer separation between:
 ## Refactoring Guidelines
 
 - Preserve runtime behavior unless explicitly requested otherwise
-- Prefer analysis before implementation
+- Prefer decisions before implementation
 - Prefer small commits
 - Prefer low-risk isolated changes
 
@@ -277,7 +270,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/editor-orchestration
+- feature/document-product-decisions
 
 ---
 
@@ -307,12 +300,11 @@ Rules:
 
 When analyzing:
 1. Current state
-2. Ownership map
-3. Problems
+2. Open questions
+3. Tradeoffs
 4. Risks
-5. Candidate models
-6. Recommended direction
-7. Practical next steps
+5. Recommendation
+6. Practical next steps
 
 When implementing:
 1. Explanation
@@ -346,4 +338,4 @@ into:
 → a modular, maintainable, scalable product foundation
 
 through:
-→ thoughtful, incremental, behavior-preserving architectural decisions
+→ explicit, thoughtful, behavior-preserving architectural decisions
