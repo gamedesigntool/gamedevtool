@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Supabase Foundation Pass
+→ Supabase Authentication Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -47,21 +47,19 @@ Previous completed phases:
 - Document Product Decisions Pass
 - Editor Sync Hardening Pass
 - Supabase Readiness Pass
+- Supabase Foundation Pass
 
 Current goals:
-- keep the completed Supabase foundations stable
-- preserve optional Supabase configuration
-- preserve the nullable Supabase client foundation
-- maintain the initial migrations infrastructure
-- keep runtime project bootstrap flowing through the async boundary
-- validate coexistence with localStorage
-- preserve runtime behavior
+- introduce optional Supabase authentication
+- add session reading
+- add login/logout foundations
+- preserve local-first behavior
+- prepare user identity for future cloud persistence
 
 Current non-goals:
 - full cloud sync
-- full authentication
-- replacing all repositories
-- migrating all data
+- repository migration
+- local/cloud merge
 - realtime collaboration
 - autosave
 - global state
@@ -99,26 +97,14 @@ Already extracted:
 - imageGenerationService
 - projectBootstrapService
 
-Prepared but not yet fully used:
-- async repository contracts
-- optional Supabase environment configuration
-- nullable Supabase client foundation
-- initial Supabase schema and migration
-- migration strategy
-- Edge Functions strategy
-
-Current architecture:
-
-UI/components
-↓
-orchestration/state
-↓
-services/repositories
-↓
-providers/persistence
+Supabase foundations already implemented:
+- environment configuration
+- nullable Supabase client
+- migrations infrastructure
+- runtime bootstrap integration
 
 Persistence currently remains localStorage-backed.
-Supabase exists only as foundation infrastructure and is not active runtime persistence yet.
+Supabase is not active runtime persistence yet.
 
 ---
 
@@ -126,41 +112,40 @@ Supabase exists only as foundation infrastructure and is not active runtime pers
 
 The current architectural priority is:
 
-→ Build on the completed Supabase foundations while preserving local-first behavior.
+→ Introduce optional user authentication while preserving local-first behavior.
 
 Primary implementation path:
 
-completed environment configuration
+completed Supabase foundations
 ↓
-completed nullable Supabase client
+session service
 ↓
-completed initial migrations infrastructure
+auth state reading
 ↓
-completed bootstrap boundary usage
+login/logout
 ↓
-future auth and repository migration
+future repository migration
 
 Key questions:
-- How should authentication be introduced without breaking local-first usage?
-- Which repository should migrate first after project identity is stable?
-- How should cloud persistence coexist with localStorage during migration?
-- What is the safest rollback path for each repository migration?
+- How should authentication remain optional?
+- How should the UI detect the current session?
+- How should login/logout be introduced with minimal coupling?
+- How will authenticated identity enable future cloud persistence?
 
 ---
 
-## Supabase Foundation Focus
+## Authentication Focus
 
 Primary areas:
-- environment configuration already exists
-- nullable Supabase client setup already exists
-- initial migrations infrastructure already exists
-- runtime bootstrap integration already exists
-- backward compatibility
-- localStorage coexistence
+- session retrieval
+- auth state observation
+- login/logout flows
+- local-first coexistence
+- user identity ownership
 
 Future directions:
-- authentication
-- cloud persistence
+- project repository migration
+- cloud sync
 - secure AI proxying
 - collaboration-ready foundations
 
@@ -168,19 +153,19 @@ Future directions:
 
 ## Planning Philosophy
 
-This phase is implementation-focused but still highly incremental.
+This phase is implementation-focused and incremental.
 
 Preferred approach:
-1. introduce one foundational layer at a time
-2. preserve current behavior
-3. validate each step
-4. keep local fallback working
-5. avoid big-bang migration
+1. add session boundary
+2. read auth state
+3. introduce minimal login/logout
+4. preserve anonymous local usage
+5. prepare future persistence migration
 
 This phase should be:
 - practical
 - low-risk
-- forward-looking
+- reversible
 - anti-overengineering
 
 ---
@@ -190,7 +175,7 @@ This phase should be:
 Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
-- Supabase integration boundaries are stable
+- authentication boundaries are stable
 - repository contracts are stable
 - ownership boundaries are clear
 
@@ -201,12 +186,16 @@ Hooks/controllers should only happen after:
 Migration philosophy:
 → incremental coexistence, not big-bang replacement.
 
-Implementation order:
-1. environment variables — completed
-2. nullable Supabase client — completed
-3. migrations setup — completed
-4. project bootstrap integration — completed
+Completed:
+1. environment variables
+2. nullable Supabase client
+3. migrations setup
+4. project bootstrap integration
+
+Current:
 5. authentication
+
+Future:
 6. repository-by-repository migration
 7. cloud persistence
 8. optional realtime
@@ -281,7 +270,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/supabase-foundation
+- feature/supabase-authentication
 
 ---
 
@@ -294,7 +283,7 @@ Current:
 - localStorage
 - Cloudflare Pages
 
-Being introduced:
+Supabase foundations:
 - Supabase
 - Postgres
 - Auth
