@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Post Supabase Authentication Planning
+→ Repository Migration Planning Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -58,10 +58,19 @@ Completed Supabase Authentication Pass:
 - authenticated user identity for future cloud persistence
 - local-first behavior preserved
 
+Current goals:
+- plan repository migration strategy
+- define local-first + cloud coexistence
+- decide which repository migrates first
+- define explicit local-to-cloud import UX
+- determine incremental implementation order
+- document tradeoffs and risks
+
 Current non-goals:
-- full cloud sync
-- repository migration
+- real cloud persistence
+- automatic sync
 - local/cloud merge
+- repository implementation changes
 - realtime collaboration
 - autosave
 - global state
@@ -98,13 +107,15 @@ Already extracted:
 - aiMessageService
 - imageGenerationService
 - projectBootstrapService
+- authSessionService
+- AuthControls
 
 Supabase foundations already implemented:
 - environment configuration
 - nullable Supabase client
 - migrations infrastructure
 - runtime bootstrap integration
-- optional authentication service and minimal auth controls
+- optional authentication service and UI
 
 Persistence currently remains localStorage-backed.
 Supabase is not active runtime persistence yet.
@@ -115,27 +126,29 @@ Supabase is not active runtime persistence yet.
 
 The current architectural priority is:
 
-→ Decide the next incremental cloud persistence boundary after authentication.
+→ Define the safest repository migration path from localStorage to Supabase.
 
 Key questions:
-- Which repository should be prepared next?
-- How should authenticated identity be threaded into future persistence without changing local-first runtime behavior?
-- When should explicit local-to-cloud import be designed?
+- Which repository should migrate first?
+- How should authenticated identity be threaded into persistence?
+- How should local and cloud coexist?
+- How should explicit import from local to cloud work?
+- How can data loss and overwrites be avoided?
 
 ---
 
-## Authentication Focus
+## Repository Migration Focus
 
 Primary areas:
-- session retrieval
-- auth state observation
-- login/logout flows
-- local-first coexistence
-- user identity ownership
+- projectRepository migration planning
+- local-first + cloud coexistence
+- explicit import UX
+- ownership-aware persistence
+- implementation sequencing
 
 Future directions:
-- project repository migration
-- cloud sync
+- cloud persistence
+- projectData split migration
 - secure AI proxying
 - collaboration-ready foundations
 
@@ -143,19 +156,20 @@ Future directions:
 
 ## Planning Philosophy
 
-This phase is implementation-focused and incremental.
+This phase is planning-focused and architecture-heavy.
 
 Preferred approach:
-1. add session boundary
-2. read auth state
-3. introduce minimal login/logout
-4. preserve anonymous local usage
-5. prepare future persistence migration
+1. analyze current repositories
+2. choose the first migration target
+3. define coexistence model
+4. define import UX
+5. define implementation order
+6. document tradeoffs
 
 This phase should be:
-- practical
+- pragmatic
 - low-risk
-- reversible
+- architecture-first
 - anti-overengineering
 
 ---
@@ -165,9 +179,9 @@ This phase should be:
 Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
-- authentication boundaries are stable
-- repository contracts are stable
+- repository boundaries are stable
 - ownership boundaries are clear
+- cloud persistence contracts are defined
 
 ---
 
@@ -181,14 +195,16 @@ Completed:
 2. nullable Supabase client
 3. migrations setup
 4. project bootstrap integration
+5. authentication
 
 Current:
-5. authentication complete
+6. repository migration planning
 
 Future:
-6. repository-by-repository migration
-7. cloud persistence
-8. optional realtime
+7. projectRepository migration
+8. projectData migration
+9. cloud sync
+10. optional realtime
 
 ---
 
@@ -260,7 +276,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/supabase-authentication
+- feature/repository-migration-planning
 
 ---
 
@@ -297,7 +313,7 @@ Rules:
 
 When analyzing:
 1. Current state
-2. Implementation targets
+2. Planning targets
 3. Risks
 4. Tradeoffs
 5. Recommendation
@@ -316,7 +332,7 @@ When implementing:
 - Do not propose full rewrites
 - Do not replace all repositories at once
 - Do not migrate all data at once
-- Do not implement full cloud sync immediately
+- Do not implement cloud persistence during this planning phase
 - Do not introduce global state
 - Do not extract hooks prematurely
 - Do not overengineer abstractions
