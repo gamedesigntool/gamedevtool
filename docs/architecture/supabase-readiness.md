@@ -48,6 +48,11 @@ Editor session state such as `activeDoc`, `editContent`, `hasUnsaved`, view sele
 `projectRepository` has a preparatory async contract and a localStorage-backed adapter.
 `settingsRepository` has a preparatory async contract and a localStorage-backed adapter.
 
+`src/services/bootstrap/projectBootstrapService.ts` exists as a future bootstrap boundary.
+Its `loadInitialProjects(fallback)` function delegates to `localProjectRepository.loadProjects({ fallback })`.
+It is not used by runtime yet.
+`GameDesignTool.tsx` still uses the current synchronous project initialization path, preserving behavior while preparing a future async bootstrap step.
+
 `projectDataRepository` intentionally remains synchronous and blob-based for now.
 It should be split into narrower future repositories before async conversion.
 
