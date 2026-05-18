@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Editor Sync Hardening Pass
+→ Supabase Readiness Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -45,27 +45,26 @@ Previous completed phases:
 - Document Actions Extraction Pass
 - Editor Orchestration Pass
 - Document Product Decisions Pass
+- Editor Sync Hardening Pass
 
 Current goals:
-- harden synchronization between DOM mutations and React draft state
-- ensure editContent remains the canonical in-memory textual draft
-- ensure hasUnsaved is updated consistently
-- reduce hidden editor synchronization gaps
-- prepare safe foundations for future navigation guard
-- prepare safe foundations for future export warning
-- prepare safe foundations for future hooks extraction
-- prepare safe foundations for future Supabase integration
+- prepare architecture for remote persistence
+- define migration strategy from localStorage to Supabase
+- identify repositories that will become async
+- design initial database schema
+- define authentication strategy
+- define storage and realtime needs
+- prepare AI Edge Function boundaries
+- minimize migration risk
 
 Current non-goals:
-- implementing autosave
-- implementing navigation guard
-- implementing export warning
-- implementing Supabase
-- introducing routing/global state
+- implementing full Supabase integration
+- replacing all repositories immediately
+- migrating all data at once
+- introducing global state
 - broad hooks extraction
 - rewriting the editor
-- replacing contentEditable
-- redesigning activeDoc immediately
+- implementing autosave
 - large refactors without explicit justification
 
 ---
@@ -91,8 +90,6 @@ Already extracted:
 - selectors
 - runtime/text/export utilities
 - guide constants
-- flow builder constants
-- kanban constants
 - document suggestions
 - document message mutation helpers
 - aiMessageService
@@ -108,15 +105,10 @@ services/repositories
 ↓
 providers/persistence
 
-GameDesignTool.tsx remains:
-- orchestration-heavy
-- render coordination-heavy
-- async coordination-heavy
-
-DocEditor remains:
-- DOM-heavy
-- contentEditable-based
-- tightly coupled to draft lifecycle
+Repositories are still:
+- synchronous
+- localStorage-backed
+- intentionally thin
 
 This is intentional.
 
@@ -126,65 +118,69 @@ This is intentional.
 
 The current architectural priority is:
 
-→ Strengthen synchronization between DOM mutations, editContent, and hasUnsaved.
+→ Prepare a safe and incremental migration path from localStorage to Supabase.
 
-Primary synchronization path:
+Primary migration path:
 
-DOM mutations
+localStorage repositories
 ↓
-editContent
+async repository contracts
 ↓
-hasUnsaved
+Supabase-backed repositories
+↓
+optional coexistence/migration layer
 
 Key questions:
-- Which mutation paths alter the editor DOM?
-- Which paths already synchronize draft state?
-- Which paths leave editContent stale?
-- Which paths leave hasUnsaved stale?
-- What is the smallest safe hardening pass?
+- Which repositories should become async first?
+- What database schema best represents current domain models?
+- How should authentication work?
+- What data belongs in Postgres vs Storage?
+- How should AI requests flow through Edge Functions?
+- How should localStorage and Supabase coexist during migration?
 
 ---
 
-## Editor Semantics Focus
+## Supabase Readiness Focus
 
-Core concepts:
-- pData.docs (persisted source of truth)
-- editContent (canonical in-memory textual draft)
-- activeDoc (operational snapshot)
-- hasUnsaved (session dirty flag, not a reliable diff proof)
-- contentEditable DOM state
+Primary areas:
+- database schema design
+- authentication design
+- repository async conversion strategy
+- migration strategy
+- environment variables
+- storage usage
+- realtime requirements
+- Edge Functions architecture
 
-Formalized decisions / future directions:
-- navigation: manual save remains current behavior; future direction is a navigation guard for unsaved textual drafts
-- export: export remains based on persisted pData.docs content; future UX should warn or offer save-before-export
-- hasUnsaved: currently a session dirty flag, not a reliable diff proof, and must not be persisted to storage or Supabase
-- activeDoc: currently an operational snapshot; future direction may move toward activeDocId plus derived selected document
-- async workflows: message persistence is scoped by captured project/module/document ids; global loading remains a known limitation
-- autosave: still a non-goal and requires stronger DOM sync, reliable dirty state, document scoping, and conflict strategy first
+Future directions:
+- gradual replacement of localStorage repositories
+- per-user cloud persistence
+- secure AI proxying through Edge Functions
+- collaboration-ready foundations
 
 ---
 
 ## Planning Philosophy
 
-This phase is implementation-light and behavior-preserving.
+This phase is architecture-first and moderately ambitious.
 
 Preferred approach:
-1. map all editor mutation paths
-2. identify synchronization gaps
-3. classify risks
-4. implement the smallest safe hardening
-5. validate runtime behavior
+1. map current persistence boundaries
+2. identify migration targets
+3. design schema and contracts
+4. define migration strategy
+5. only then implement incrementally
 
 This phase should be:
-- focused
 - pragmatic
-- low-risk
+- forward-looking
+- structured
 - anti-overengineering
 
 Not:
-- rewrite-driven
-- abstraction-heavy
-- feature-driven
+- big-bang migration
+- framework mania
+- speculative abstraction
 
 ---
 
@@ -193,31 +189,25 @@ Not:
 Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
-- product decisions are explicit
-- document semantics are stable
-- editor synchronization is reliable
-- ownership boundaries are explicit
-
-Preferred future direction:
-- focused hooks
-- focused orchestration boundaries
-- explicit responsibilities
+- Supabase integration boundaries are explicit
+- repository contracts are stable
+- ownership boundaries are clear
 
 ---
 
 ## Supabase Strategy
 
-Supabase is still NOT the current implementation target.
-
-Before Supabase:
-- document semantics must be explicit
-- editor semantics must be explicit
-- product decisions must be documented
-- dirty state must be reliable
-- persistence boundaries must be clear
-
 Migration philosophy:
 → incremental coexistence, not big-bang replacement.
+
+Preferred order:
+1. schema design
+2. auth design
+3. repository async planning
+4. environment setup
+5. one repository migration at a time
+6. local data migration
+7. optional realtime
 
 ---
 
@@ -243,30 +233,31 @@ Prefer separation between:
 
 ### State Management
 
-- Local state is still acceptable
+- Local state remains acceptable
 - Avoid global state prematurely
 - Hooks should extract focused responsibilities only
 
 ### Data Modeling
 
-- Define explicit domain types
-- Keep frontend/domain models explicit
-- Prefer incremental typing improvements
+- Keep domain models explicit
+- Prefer typed repository contracts
+- Align frontend and database semantics carefully
 
 ---
 
 ## Refactoring Guidelines
 
 - Preserve runtime behavior unless explicitly requested otherwise
-- Prefer targeted hardening over broad refactors
+- Prefer incremental migration over replacement
 - Prefer small commits
-- Prefer low-risk isolated changes
+- Prefer reversible changes
 
 When implementing:
-1. identify responsibilities
-2. isolate the smallest safe unit
-3. validate runtime
-4. commit
+1. identify target boundary
+2. define contract
+3. implement minimal change
+4. validate behavior
+5. commit
 
 ---
 
@@ -288,7 +279,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/editor-sync-hardening
+- feature/supabase-readiness
 
 ---
 
@@ -301,8 +292,13 @@ Current:
 - localStorage
 - Cloudflare Pages
 
-Planned later:
+Planned:
 - Supabase
+- Postgres
+- Auth
+- Storage
+- Realtime
+- Edge Functions
 - React Router
 - TanStack Query
 - Zod
@@ -318,9 +314,9 @@ Rules:
 
 When analyzing:
 1. Current state
-2. Ownership map
-3. Synchronization paths
-4. Risks
+2. Migration targets
+3. Risks
+4. Tradeoffs
 5. Recommendation
 6. Practical next steps
 
@@ -335,13 +331,11 @@ When implementing:
 ## DO NOT
 
 - Do not propose full rewrites
+- Do not replace all repositories at once
+- Do not migrate all data at once
 - Do not implement autosave
-- Do not implement navigation guard
-- Do not implement export warning
-- Do not implement Supabase yet
-- Do not extract hooks prematurely
-- Do not replace contentEditable
 - Do not introduce global state
+- Do not extract hooks prematurely
 - Do not overengineer abstractions
 - Do not create framework architectures
 
@@ -355,7 +349,7 @@ from:
 → a working AI-assisted prototype
 
 into:
-→ a modular, maintainable, scalable product foundation
+→ a cloud-backed, scalable game design platform
 
 through:
-→ explicit, thoughtful, behavior-preserving architectural decisions
+→ explicit, incremental, behavior-preserving architectural decisions
