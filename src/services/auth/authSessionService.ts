@@ -16,6 +16,12 @@ export type AuthSignOutResult =
   | { status: "signed-out" }
   | { status: "error"; error: Error };
 
+export type AuthSignInResult =
+  | { status: "unconfigured" }
+  | { status: "anonymous" }
+  | { status: "authenticated"; snapshot: Extract<AuthSessionSnapshot, { status: "authenticated" }> }
+  | { status: "error"; error: Error };
+
 const unconfiguredAuthSession: AuthSessionSnapshot = {
   status: "unconfigured",
   session: null,
@@ -68,6 +74,31 @@ export function observeAuthSession(
   return () => {
     subscription.unsubscribe();
   };
+}
+
+export async function signInWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<AuthSignInResult> {
+  if (!supabaseClient) return { status: "unconfigured" };
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.warn("Failed to sign in with Supabase auth", error);
+    return { status: "error", error };
+  }
+
+  const snapshot = toAuthSessionSnapshot(data.session);
+
+  if (snapshot.status === "authenticated") {
+    return { status: "authenticated", snapshot };
+  }
+
+  return { status: "anonymous" };
 }
 
 export async function signOutAuthSession(): Promise<AuthSignOutResult> {
