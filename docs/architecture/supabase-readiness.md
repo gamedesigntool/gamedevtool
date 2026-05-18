@@ -43,6 +43,17 @@ Current persistence is intentionally thin and synchronous.
 The canonical saved document source remains `pData[projectId][moduleId].docs`.
 Editor session state such as `activeDoc`, `editContent`, `hasUnsaved`, view selection, modal state, and loading state must not become persisted data.
 
+## Async Repository Readiness
+
+`projectRepository` has a preparatory async contract and a localStorage-backed adapter.
+`settingsRepository` has a preparatory async contract and a localStorage-backed adapter.
+
+`projectDataRepository` intentionally remains synchronous and blob-based for now.
+It should be split into narrower future repositories before async conversion.
+
+No call sites have been migrated to async runtime usage yet.
+localStorage remains the active backing implementation.
+
 ## Target Supabase Model
 
 The pragmatic v1 Supabase model should favor explicit ownership and queryable product entities without normalizing every interactive sub-shape.
