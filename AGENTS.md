@@ -86,6 +86,7 @@ The following documents are the current source of truth:
 - docs/architecture/document-semantics.md
 - docs/architecture/editor-orchestration.md
 - docs/architecture/editor-sync-risks.md
+- docs/architecture/repository-migration-strategy.md
 - docs/architecture/supabase-readiness.md
 - docs/architecture/supabase-schema-v1.sql
 
@@ -128,6 +129,9 @@ The current architectural priority is:
 
 → Define the safest repository migration path from localStorage to Supabase.
 
+The current repository migration strategy is documented in:
+- docs/architecture/repository-migration-strategy.md
+
 Key questions:
 - Which repository should migrate first?
 - How should authenticated identity be threaded into persistence?
@@ -145,6 +149,13 @@ Primary areas:
 - explicit import UX
 - ownership-aware persistence
 - implementation sequencing
+
+Current planning decision:
+- projectRepository is the first planned migration target
+- projectDataRepository must not be migrated first
+- local-first behavior remains preserved
+- explicit local-to-cloud import is required
+- no runtime cloud persistence exists yet
 
 Future directions:
 - cloud persistence
@@ -199,6 +210,9 @@ Completed:
 
 Current:
 6. repository migration planning
+
+Repository migration planning is captured in:
+- docs/architecture/repository-migration-strategy.md
 
 Future:
 7. projectRepository migration
