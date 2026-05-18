@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Supabase Authentication Pass
+→ Post Supabase Authentication Planning
 
 Previous completed phases:
 - Data Extraction Pass
@@ -48,13 +48,15 @@ Previous completed phases:
 - Editor Sync Hardening Pass
 - Supabase Readiness Pass
 - Supabase Foundation Pass
+- Supabase Authentication Pass
 
-Current goals:
-- introduce optional Supabase authentication
-- add session reading
-- add login/logout foundations
-- preserve local-first behavior
-- prepare user identity for future cloud persistence
+Completed Supabase Authentication Pass:
+- optional Supabase authentication
+- session reading
+- auth state observation
+- minimal email/password login and logout foundations
+- authenticated user identity for future cloud persistence
+- local-first behavior preserved
 
 Current non-goals:
 - full cloud sync
@@ -102,6 +104,7 @@ Supabase foundations already implemented:
 - nullable Supabase client
 - migrations infrastructure
 - runtime bootstrap integration
+- optional authentication service and minimal auth controls
 
 Persistence currently remains localStorage-backed.
 Supabase is not active runtime persistence yet.
@@ -112,25 +115,12 @@ Supabase is not active runtime persistence yet.
 
 The current architectural priority is:
 
-→ Introduce optional user authentication while preserving local-first behavior.
-
-Primary implementation path:
-
-completed Supabase foundations
-↓
-session service
-↓
-auth state reading
-↓
-login/logout
-↓
-future repository migration
+→ Decide the next incremental cloud persistence boundary after authentication.
 
 Key questions:
-- How should authentication remain optional?
-- How should the UI detect the current session?
-- How should login/logout be introduced with minimal coupling?
-- How will authenticated identity enable future cloud persistence?
+- Which repository should be prepared next?
+- How should authenticated identity be threaded into future persistence without changing local-first runtime behavior?
+- When should explicit local-to-cloud import be designed?
 
 ---
 
@@ -193,7 +183,7 @@ Completed:
 4. project bootstrap integration
 
 Current:
-5. authentication
+5. authentication complete
 
 Future:
 6. repository-by-repository migration

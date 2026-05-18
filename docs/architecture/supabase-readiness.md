@@ -3,7 +3,16 @@
 This note records the accepted architecture direction for the Supabase Readiness Pass.
 It prepares the project for an incremental migration from localStorage-backed persistence to Supabase-backed persistence.
 
-This is not a full Supabase integration pass. It does not implement Supabase, authentication, autosave, realtime collaboration, repository replacement, editor rewrites, or broad state extraction.
+This is not a full Supabase integration pass. It does not implement autosave, realtime collaboration, repository replacement, editor rewrites, or broad state extraction.
+
+Update after the Supabase Authentication Pass:
+
+- optional Supabase authentication now exists behind a nullable client boundary
+- missing Supabase environment variables keep the app in local-only mode
+- login and logout do not alter local projects, project data, or settings
+- localStorage remains the active runtime persistence
+- authenticated user identity is only a foundation for future cloud persistence
+- cloud sync, import, merge, sign-up, and account management remain future phases
 
 ## Purpose
 
@@ -219,6 +228,15 @@ The product should remain local-first by default.
 
 Users should be able to use the local app without login while persistence remains localStorage-backed.
 
+The Supabase Authentication Pass implemented only the minimal runtime foundations:
+
+- `authSessionService` for session reading, auth state observation, email/password sign-in, and sign-out
+- local component state for the current auth snapshot
+- `AuthControls` for minimal login/logout UI when Supabase is configured
+
+When Supabase is not configured, auth resolves to local-only mode and no login UI is shown.
+When a user signs in or signs out, local projects, project data, and settings remain untouched.
+
 Login should become necessary for:
 
 - cloud sync
@@ -331,7 +349,10 @@ This pass must not:
 
 ## Recommended Next Implementation Step
 
-The next implementation step should be async contract and adapter planning for `projectRepository`.
+The next step should return to architectural planning before runtime persistence changes.
 
-The first code change should keep localStorage as the backing implementation while shaping the future async API for project persistence.
-This validates the migration direction with the smallest runtime surface area and avoids touching the editor, document draft state, messages, canvas, or flow builder.
+Recommended focus:
+
+1. Decide the first repository boundary to prepare after authentication.
+2. Keep localStorage as the active runtime persistence until import and coexistence behavior are explicitly designed.
+3. Do not begin cloud sync, local/cloud merge, sign-up, account management, or repository migration as part of the authentication pass.
