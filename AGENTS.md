@@ -86,6 +86,8 @@ The following documents are the current source of truth:
 - docs/architecture/document-semantics.md
 - docs/architecture/editor-orchestration.md
 - docs/architecture/editor-sync-risks.md
+- docs/architecture/local-to-cloud-import-service.md
+- docs/architecture/persistence-context.md
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/supabase-readiness.md
 - docs/architecture/supabase-schema-v1.sql
@@ -131,6 +133,8 @@ The current architectural priority is:
 
 The current repository migration strategy is documented in:
 - docs/architecture/repository-migration-strategy.md
+- docs/architecture/persistence-context.md
+- docs/architecture/local-to-cloud-import-service.md
 
 Key questions:
 - Which repository should migrate first?
@@ -156,6 +160,8 @@ Current planning decision:
 - local-first behavior remains preserved
 - explicit local-to-cloud import is required
 - no runtime cloud persistence exists yet
+- PersistenceContext is documented in docs/architecture/persistence-context.md
+- LocalToCloudImportService is documented in docs/architecture/local-to-cloud-import-service.md
 
 Future directions:
 - cloud persistence
