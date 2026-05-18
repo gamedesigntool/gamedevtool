@@ -49,11 +49,11 @@ Previous completed phases:
 - Supabase Readiness Pass
 
 Current goals:
-- introduce the first concrete Supabase foundations
-- add environment configuration
-- add Supabase client setup
-- prepare migrations infrastructure
-- integrate project bootstrap through the async boundary
+- keep the completed Supabase foundations stable
+- preserve optional Supabase configuration
+- preserve the nullable Supabase client foundation
+- maintain the initial migrations infrastructure
+- keep runtime project bootstrap flowing through the async boundary
 - validate coexistence with localStorage
 - preserve runtime behavior
 
@@ -101,7 +101,9 @@ Already extracted:
 
 Prepared but not yet fully used:
 - async repository contracts
-- initial Supabase schema
+- optional Supabase environment configuration
+- nullable Supabase client foundation
+- initial Supabase schema and migration
 - migration strategy
 - Edge Functions strategy
 
@@ -116,6 +118,7 @@ services/repositories
 providers/persistence
 
 Persistence currently remains localStorage-backed.
+Supabase exists only as foundation infrastructure and is not active runtime persistence yet.
 
 ---
 
@@ -123,35 +126,35 @@ Persistence currently remains localStorage-backed.
 
 The current architectural priority is:
 
-→ Introduce the first runtime foundations for Supabase while preserving local-first behavior.
+→ Build on the completed Supabase foundations while preserving local-first behavior.
 
 Primary implementation path:
 
-environment configuration
+completed environment configuration
 ↓
-Supabase client
+completed nullable Supabase client
 ↓
-migrations infrastructure
+completed initial migrations infrastructure
 ↓
-bootstrap boundary usage
+completed bootstrap boundary usage
 ↓
-future repository migration
+future auth and repository migration
 
 Key questions:
-- How should environment variables be organized?
-- How should the Supabase client be initialized?
-- How should bootstrap remain backward-compatible?
-- What is the safest first runtime integration?
+- How should authentication be introduced without breaking local-first usage?
+- Which repository should migrate first after project identity is stable?
+- How should cloud persistence coexist with localStorage during migration?
+- What is the safest rollback path for each repository migration?
 
 ---
 
 ## Supabase Foundation Focus
 
 Primary areas:
-- environment configuration
-- Supabase client setup
-- migrations infrastructure
-- runtime bootstrap integration
+- environment configuration already exists
+- nullable Supabase client setup already exists
+- initial migrations infrastructure already exists
+- runtime bootstrap integration already exists
 - backward compatibility
 - localStorage coexistence
 
@@ -199,13 +202,14 @@ Migration philosophy:
 → incremental coexistence, not big-bang replacement.
 
 Implementation order:
-1. environment variables
-2. Supabase client
-3. migrations setup
-4. project bootstrap integration
+1. environment variables — completed
+2. nullable Supabase client — completed
+3. migrations setup — completed
+4. project bootstrap integration — completed
 5. authentication
 6. repository-by-repository migration
-7. optional realtime
+7. cloud persistence
+8. optional realtime
 
 ---
 
