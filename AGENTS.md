@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Supabase Readiness Pass
+→ Supabase Foundation Pass
 
 Previous completed phases:
 - Data Extraction Pass
@@ -46,38 +46,41 @@ Previous completed phases:
 - Editor Orchestration Pass
 - Document Product Decisions Pass
 - Editor Sync Hardening Pass
+- Supabase Readiness Pass
 
 Current goals:
-- prepare architecture for remote persistence
-- define migration strategy from localStorage to Supabase
-- identify repositories that will become async
-- design initial database schema
-- define authentication strategy
-- define storage and realtime needs
-- prepare AI Edge Function boundaries
-- minimize migration risk
+- introduce the first concrete Supabase foundations
+- add environment configuration
+- add Supabase client setup
+- prepare migrations infrastructure
+- integrate project bootstrap through the async boundary
+- validate coexistence with localStorage
+- preserve runtime behavior
 
 Current non-goals:
-- implementing full Supabase integration
-- replacing all repositories immediately
-- migrating all data at once
-- introducing global state
+- full cloud sync
+- full authentication
+- replacing all repositories
+- migrating all data
+- realtime collaboration
+- autosave
+- global state
 - broad hooks extraction
-- rewriting the editor
-- implementing autosave
-- large refactors without explicit justification
+- large rewrites
 
 ---
 
 ## Canonical Architecture Documents
 
-The following documents are the source of truth for current document/editor semantics:
+The following documents are the current source of truth:
 
 - docs/architecture/document-semantics.md
 - docs/architecture/editor-orchestration.md
 - docs/architecture/editor-sync-risks.md
+- docs/architecture/supabase-readiness.md
+- docs/architecture/supabase-schema-v1.sql
 
-These documents must be consulted before proposing structural changes.
+These documents must be consulted before proposing architectural changes.
 
 ---
 
@@ -94,6 +97,13 @@ Already extracted:
 - document message mutation helpers
 - aiMessageService
 - imageGenerationService
+- projectBootstrapService
+
+Prepared but not yet fully used:
+- async repository contracts
+- initial Supabase schema
+- migration strategy
+- Edge Functions strategy
 
 Current architecture:
 
@@ -105,12 +115,7 @@ services/repositories
 ↓
 providers/persistence
 
-Repositories are still:
-- synchronous
-- localStorage-backed
-- intentionally thin
-
-This is intentional.
+Persistence currently remains localStorage-backed.
 
 ---
 
@@ -118,69 +123,62 @@ This is intentional.
 
 The current architectural priority is:
 
-→ Prepare a safe and incremental migration path from localStorage to Supabase.
+→ Introduce the first runtime foundations for Supabase while preserving local-first behavior.
 
-Primary migration path:
+Primary implementation path:
 
-localStorage repositories
+environment configuration
 ↓
-async repository contracts
+Supabase client
 ↓
-Supabase-backed repositories
+migrations infrastructure
 ↓
-optional coexistence/migration layer
+bootstrap boundary usage
+↓
+future repository migration
 
 Key questions:
-- Which repositories should become async first?
-- What database schema best represents current domain models?
-- How should authentication work?
-- What data belongs in Postgres vs Storage?
-- How should AI requests flow through Edge Functions?
-- How should localStorage and Supabase coexist during migration?
+- How should environment variables be organized?
+- How should the Supabase client be initialized?
+- How should bootstrap remain backward-compatible?
+- What is the safest first runtime integration?
 
 ---
 
-## Supabase Readiness Focus
+## Supabase Foundation Focus
 
 Primary areas:
-- database schema design
-- authentication design
-- repository async conversion strategy
-- migration strategy
-- environment variables
-- storage usage
-- realtime requirements
-- Edge Functions architecture
+- environment configuration
+- Supabase client setup
+- migrations infrastructure
+- runtime bootstrap integration
+- backward compatibility
+- localStorage coexistence
 
 Future directions:
-- gradual replacement of localStorage repositories
-- per-user cloud persistence
-- secure AI proxying through Edge Functions
+- authentication
+- cloud persistence
+- secure AI proxying
 - collaboration-ready foundations
 
 ---
 
 ## Planning Philosophy
 
-This phase is architecture-first and moderately ambitious.
+This phase is implementation-focused but still highly incremental.
 
 Preferred approach:
-1. map current persistence boundaries
-2. identify migration targets
-3. design schema and contracts
-4. define migration strategy
-5. only then implement incrementally
+1. introduce one foundational layer at a time
+2. preserve current behavior
+3. validate each step
+4. keep local fallback working
+5. avoid big-bang migration
 
 This phase should be:
-- pragmatic
+- practical
+- low-risk
 - forward-looking
-- structured
 - anti-overengineering
-
-Not:
-- big-bang migration
-- framework mania
-- speculative abstraction
 
 ---
 
@@ -189,7 +187,7 @@ Not:
 Hooks extraction remains postponed.
 
 Hooks/controllers should only happen after:
-- Supabase integration boundaries are explicit
+- Supabase integration boundaries are stable
 - repository contracts are stable
 - ownership boundaries are clear
 
@@ -200,13 +198,13 @@ Hooks/controllers should only happen after:
 Migration philosophy:
 → incremental coexistence, not big-bang replacement.
 
-Preferred order:
-1. schema design
-2. auth design
-3. repository async planning
-4. environment setup
-5. one repository migration at a time
-6. local data migration
+Implementation order:
+1. environment variables
+2. Supabase client
+3. migrations setup
+4. project bootstrap integration
+5. authentication
+6. repository-by-repository migration
 7. optional realtime
 
 ---
@@ -279,7 +277,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/supabase-readiness
+- feature/supabase-foundation
 
 ---
 
@@ -292,13 +290,15 @@ Current:
 - localStorage
 - Cloudflare Pages
 
-Planned:
+Being introduced:
 - Supabase
 - Postgres
 - Auth
 - Storage
-- Realtime
 - Edge Functions
+
+Planned later:
+- Realtime
 - React Router
 - TanStack Query
 - Zod
@@ -314,7 +314,7 @@ Rules:
 
 When analyzing:
 1. Current state
-2. Migration targets
+2. Implementation targets
 3. Risks
 4. Tradeoffs
 5. Recommendation
@@ -333,7 +333,7 @@ When implementing:
 - Do not propose full rewrites
 - Do not replace all repositories at once
 - Do not migrate all data at once
-- Do not implement autosave
+- Do not implement full cloud sync immediately
 - Do not introduce global state
 - Do not extract hooks prematurely
 - Do not overengineer abstractions
