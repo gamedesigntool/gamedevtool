@@ -24,6 +24,7 @@ import { getStoredProjectData, saveStoredProjectData } from "./repositories/proj
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
 import { sendAiMessage } from "./services/ai/aiMessageService";
+import { getCurrentAuthSession, observeAuthSession, type AuthSessionSnapshot } from "./services/auth/authSessionService";
 import { loadInitialProjects } from "./services/bootstrap/projectBootstrapService";
 import { generateImageUrl } from "./services/image/imageGenerationService";
 import { exportToPDF } from "./utils/gddExport";
@@ -5012,6 +5013,7 @@ function GDDHubInner(){
 
   const [view,setView]=useState<ViewKey>('landing');
   const [projects,setProjects]=useState<Project[]>(()=>getStoredProjects(ECHOES_DEFAULT));
+  const [,setAuthSession]=useState<AuthSessionSnapshot>({status:'loading',session:null,user:null});
   const initialProjectsRef=useRef<Project[] | null>(projects);
   const [project,setProject]=useState<Project | null>(null),[module,setModule]=useState<ModuleMeta | null>(null),[activeDoc,setActiveDoc]=useState<Document | null>(null);
   const [pData,setPData]=useState<ProjectData>(()=>getStoredProjectData(PDATA_DEFAULT));
@@ -5031,6 +5033,22 @@ function GDDHubInner(){
   useEffect(()=>{const fn=()=>setScrolled(window.scrollY>30);window.addEventListener('scroll',fn);return()=>window.removeEventListener('scroll',fn);},[]);
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
   useEffect(()=>{if(!project&&GUIDED_VIEWS.includes(view))setView('dashboard');},[project,view]);
+  useEffect(()=>{
+    let isMounted=true;
+    getCurrentAuthSession().then(snapshot=>{
+      if(isMounted)setAuthSession(snapshot);
+    }).catch(error=>{
+      console.warn("Failed to read auth session",error);
+      if(isMounted)setAuthSession({status:'anonymous',session:null,user:null});
+    });
+    const unsubscribe=observeAuthSession(snapshot=>{
+      if(isMounted)setAuthSession(snapshot);
+    });
+    return()=>{
+      isMounted=false;
+      unsubscribe();
+    };
+  },[]);
   useEffect(()=>{
     let isMounted=true;
     loadInitialProjects(ECHOES_DEFAULT).then(initialProjects=>{
