@@ -115,6 +115,47 @@ Do not normalize these during the readiness pass:
 - per-toolbar editor operations
 - module configuration constants
 
+## ProjectData Split Boundaries
+
+`projectDataRepository` is currently a synchronous localStorage snapshot repository.
+It persists the whole `ProjectData` blob under `gdt_pdata`, and it remains the active runtime path for now.
+
+It should not be converted directly to async yet because:
+
+- the current `useState` initializer cannot become async directly
+- the global `pData` save effect could race against async loading or later async saves
+- `ProjectData` mixes documents, messages, production tasks, canvas data, flow data, and embedded image references
+- document/editor semantics are sensitive and are already documented in the document and editor architecture notes
+
+Future persistence should split this blob into narrower boundaries:
+
+- `documentRepository` for saved document metadata, status, content, module ownership, and delete/create/update operations
+- `documentMessageRepository` for document chat history, append/set operations, and future AI context retrieval
+- `productionTaskRepository` for Kanban task persistence by project
+- `canvasRepository` for project canvas boards, keeping elements and strokes as JSON initially
+- `assetRepository` later for uploaded/generated images and Storage-backed metadata
+- flow builder data should remain inside `Document.flowData` initially, rather than becoming a separate normalized boundary
+
+Recommended migration order:
+
+1. Keep `projectDataRepository` as the local snapshot repository.
+2. Document the split boundaries before changing runtime behavior.
+3. Define async contracts later, once project identity and bootstrap behavior are clearer.
+4. Migrate documents after project identity and async bootstrapping are stable.
+5. Normalize messages with the first document migration.
+6. Migrate production tasks after documents and messages.
+7. Migrate canvas and flow JSON later.
+8. Migrate Storage-backed assets last.
+
+Non-goals for this pass:
+
+- no async conversion of `projectDataRepository` yet
+- no `GameDesignTool.tsx` changes
+- no editor rewrite
+- no autosave
+- no Storage migration now
+- no normalization of canvas or flow internals now
+
 ## Open Schema Decisions
 
 ### `project_modules` vs `module_key`
