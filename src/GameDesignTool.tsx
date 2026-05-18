@@ -181,7 +181,7 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
         <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleUpload}/>
       </div>
       {selImg&&<div style={{padding:'6px 12px',borderBottom:'1px solid '+'var(--gdd-border2)',background:'var(--gdd-bg0)',flexShrink:0}}><ImgResizeBar img={selImg} color={color} onApply={syncFromDom} onClose={()=>setSelImg(null)}/></div>}
-      <div ref={edRef} contentEditable suppressContentEditableWarning onClick={handleClick} onInput={e=>onChange(e.currentTarget.innerHTML)} data-placeholder="Comece a escrever ou use a IA para gerar conteúdo..." style={{flex:1,overflowY:'auto',padding:'20px 24px',outline:'none',lineHeight:1.8,fontSize:14,color:'var(--gdd-text)',caretColor:color}}/>
+      <div ref={edRef} contentEditable suppressContentEditableWarning onClick={handleClick} onInput={syncFromDom} onBlur={syncFromDom} data-placeholder="Comece a escrever ou use a IA para gerar conteúdo..." style={{flex:1,overflowY:'auto',padding:'20px 24px',outline:'none',lineHeight:1.8,fontSize:14,color:'var(--gdd-text)',caretColor:color}}/>
       {imgModal&&<div style={{position:'absolute',inset:0,background:'rgba(0,0,0,.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50}}><div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border)',borderRadius:16,padding:24,width:380}}><h3 style={{margin:'0 0 6px',fontSize:16}}>🖼️ Gerar imagem com IA</h3><p style={{color:'var(--gdd-dim)',fontSize:12,margin:'0 0 14px'}}>Descreva a imagem a inserir.</p><textarea value={imgPrompt} onChange={e=>setImgPrompt(e.target.value)} placeholder="Ex: Floresta sombria com névoa, dark fantasy..." style={{...S.inp,height:80,resize:'none',fontSize:13}}/><div style={{display:'flex',gap:8,marginTop:14}}><button style={S.btn(genLoading?'var(--gdd-border)':color,'#fff',{flex:1})} onClick={handleGenImg} disabled={genLoading}>{genLoading?'Gerando...':'Gerar e inserir'}</button><button style={S.btn('var(--gdd-border)')} onClick={()=>{setImgModal(false);setImgPrompt('');}} >Cancelar</button></div></div></div>}
       <style>{`[contenteditable]:empty:before{content:attr(data-placeholder);color:var(--gdd-dim);pointer-events:none}[contenteditable] h2{font-size:22px;font-weight:900;color:var(--gdd-text);margin:16px 0 8px}[contenteditable] h3{font-size:17px;font-weight:800;color:var(--gdd-text);margin:14px 0 6px}[contenteditable] h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gdd-muted);margin:12px 0 5px}[contenteditable] p{margin:5px 0}[contenteditable] ul,[contenteditable] ol{padding-left:22px;margin:8px 0}[contenteditable] li{margin:4px 0}[contenteditable] strong,[contenteditable] b{color:var(--gdd-text);font-weight:700}[contenteditable] img{border-radius:8px;margin:8px 0;display:block;cursor:pointer}${imgHoverStyle}[contenteditable] figure{margin:12px 0}[contenteditable] figcaption{font-size:11px;color:var(--gdd-dim);text-align:center;margin-top:4px;font-style:italic}[contenteditable] hr{border:none;border-top:1px solid var(--gdd-border);margin:12px 0}[contenteditable] code{background:var(--gdd-border);padding:2px 5px;border-radius:4px;font-size:11px;font-family:monospace;color:#c084fc}`}</style>
     </div>
@@ -5086,6 +5086,10 @@ function GDDHubInner(){
     setMod(pId,mId,renameDocumentInModule(curr,activeDoc.id,title));
     setActiveDoc(v=>v?({...v,title}):v);
   };
+  const handleEditorChange=useCallback((value: string)=>{
+    setEditContent(value);
+    setHasUnsaved(true);
+  },[]);
 
   const send=async()=>{
     if(!input.trim()||loading||!project||!module||!activeDoc)return;
@@ -5800,7 +5804,7 @@ function GDDHubInner(){
             </div>
           </div>
           <div style={{flex:'0 0 58%',display:'flex',flexDirection:'column',overflow:'hidden'}}>
-            <DocEditor key={activeDoc.id} value={editContent} color={clr} onChange={v=>{setEditContent(v);setHasUnsaved(true);}} insertRef={insertRef}/>
+            <DocEditor key={activeDoc.id} value={editContent} color={clr} onChange={handleEditorChange} insertRef={insertRef}/>
           </div>
         </div>
         {confirm?.type==='deleteDoc'&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}}><div style={{background:th.bg2,border:'1px solid '+th.border,borderRadius:18,padding:32,width:340,textAlign:'center'}}><div style={{fontSize:38,marginBottom:14}}>🗑️</div><h3 style={{margin:'0 0 10px',fontSize:17}}>Excluir documento?</h3><p style={{color:th.dim,fontSize:13,margin:'0 0 22px'}}>"{activeDoc.title}" e toda a conversa com a IA serão perdidos.</p><div style={{display:'flex',gap:10,justifyContent:'center'}}><button style={S.btn('#ef4444')} onClick={()=>{deleteDoc(activeDoc.id);setConfirm(null);}}>Excluir</button><button style={S.btn(th.border)} onClick={()=>setConfirm(null)}>{t ? t.cancel : 'Cancelar'}</button></div></div></div>)}
