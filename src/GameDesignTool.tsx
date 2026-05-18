@@ -126,10 +126,10 @@ const mkS=(th)=>({
 const S=mkS(THEMES.dark);// default for top-level components; GDDHub uses mkS(th)
 
 // ── ImgResizeBar ──────────────────────────────────────────────────────────────
-function ImgResizeBar({img,color,onClose}:{img: HTMLImageElement | null; color: string; onClose: () => void}){
+function ImgResizeBar({img,color,onApply,onClose}:{img: HTMLImageElement | null; color: string; onApply: () => void; onClose: () => void}){
   const [custom,setCustom]=useState('');
   if(!img)return null;
-  const apply=w=>{img.style.width=w;img.style.maxWidth='100%';onClose();};
+  const apply=(w: string)=>{img.style.setProperty('width',w);img.style.setProperty('max-width','100%');onApply();onClose();};
   return(
     <div style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',background:'var(--gdd-bg3)',border:`1px solid ${color}55`,borderRadius:8,flexWrap:'wrap'}}>
       <span style={{fontSize:11,color:'var(--gdd-dim)'}}>📐</span>
@@ -147,17 +147,18 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
   const edRef=useRef<EditableDiv | null>(null),fileRef=useRef<HTMLInputElement | null>(null);
   const [imgModal,setImgModal]=useState(false),[imgPrompt,setImgPrompt]=useState(''),[genLoading,setGenLoading]=useState(false),[selImg,setSelImg]=useState<HTMLImageElement | null>(null),[,tick]=useState(0);
   const hoverClr=color||'#7c3aed';
+  const syncFromDom=useCallback(()=>onChange(edRef.current?.innerHTML||''),[onChange]);
   useEffect(()=>{if(edRef.current&&!edRef.current._init){edRef.current.innerHTML=value||'';edRef.current._init=true;}},[]);
-  useEffect(()=>{if(!insertRef)return;insertRef.current=html=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<hr>'+html);onChange(el.innerHTML);};},[insertRef,onChange]);
-  const exec=(cmd:string,val?:string)=>{document.execCommand(cmd,false,val);edRef.current?.focus();tick(n=>n+1);};
+  useEffect(()=>{if(!insertRef)return;insertRef.current=html=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<hr>'+html);syncFromDom();};return()=>{if(insertRef.current)insertRef.current=null;};},[insertRef,syncFromDom]);
+  const exec=(cmd:string,val?:string)=>{document.execCommand(cmd,false,val);edRef.current?.focus();syncFromDom();tick(n=>n+1);};
   const qState=(cmd: string)=>{try{return document.queryCommandState(cmd);}catch(e){return false;}};
   const handleClick=(e: MouseEvent<HTMLDivElement>)=>{if(e.target instanceof HTMLImageElement)setSelImg(e.target);else setSelImg(null);};
-  const handleUpload=(e: ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const result=typeof r.result==='string'?r.result:'';if(!result)return;edRef.current?.focus();document.execCommand('insertHTML',false,'<br><img src="'+result+'" alt="'+f.name+'" style="max-width:100%;border-radius:8px;margin:8px 0;display:block"><br>');onChange(edRef.current?.innerHTML||'');};r.readAsDataURL(f);e.target.value='';};
+  const handleUpload=(e: ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const result=typeof r.result==='string'?r.result:'';if(!result)return;edRef.current?.focus();document.execCommand('insertHTML',false,'<br><img src="'+result+'" alt="'+f.name+'" style="max-width:100%;border-radius:8px;margin:8px 0;display:block"><br>');syncFromDom();};r.readAsDataURL(f);e.target.value='';};
   const handleGenImg=async()=>{
     if(!imgPrompt.trim())return;setGenLoading(true);
     try{
       const url=await generateImageUrl(imgPrompt);
-      const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<br><figure style="margin:12px 0;text-align:center"><img src="'+url+'" alt="'+imgPrompt+'" style="max-width:100%;border-radius:8px;display:block;margin:0 auto"><figcaption>'+imgPrompt+'</figcaption></figure><br>');onChange(el.innerHTML||'');setImgModal(false);setImgPrompt('');
+      const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<br><figure style="margin:12px 0;text-align:center"><img src="'+url+'" alt="'+imgPrompt+'" style="max-width:100%;border-radius:8px;display:block;margin:0 auto"><figcaption>'+imgPrompt+'</figcaption></figure><br>');syncFromDom();setImgModal(false);setImgPrompt('');
     }catch{
       alert('Erro ao gerar. Tente outro prompt.');
     }finally{
@@ -179,7 +180,7 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
         <button onMouseDown={e=>{e.preventDefault();setImgModal(true);}} style={{background:color+'18',border:'1px solid '+color+'50',color,borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:600}}>🖼️ IA Image</button>
         <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleUpload}/>
       </div>
-      {selImg&&<div style={{padding:'6px 12px',borderBottom:'1px solid '+'var(--gdd-border2)',background:'var(--gdd-bg0)',flexShrink:0}}><ImgResizeBar img={selImg} color={color} onClose={()=>{onChange(edRef.current?.innerHTML||'');setSelImg(null);}}/></div>}
+      {selImg&&<div style={{padding:'6px 12px',borderBottom:'1px solid '+'var(--gdd-border2)',background:'var(--gdd-bg0)',flexShrink:0}}><ImgResizeBar img={selImg} color={color} onApply={syncFromDom} onClose={()=>setSelImg(null)}/></div>}
       <div ref={edRef} contentEditable suppressContentEditableWarning onClick={handleClick} onInput={e=>onChange(e.currentTarget.innerHTML)} data-placeholder="Comece a escrever ou use a IA para gerar conteúdo..." style={{flex:1,overflowY:'auto',padding:'20px 24px',outline:'none',lineHeight:1.8,fontSize:14,color:'var(--gdd-text)',caretColor:color}}/>
       {imgModal&&<div style={{position:'absolute',inset:0,background:'rgba(0,0,0,.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50}}><div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border)',borderRadius:16,padding:24,width:380}}><h3 style={{margin:'0 0 6px',fontSize:16}}>🖼️ Gerar imagem com IA</h3><p style={{color:'var(--gdd-dim)',fontSize:12,margin:'0 0 14px'}}>Descreva a imagem a inserir.</p><textarea value={imgPrompt} onChange={e=>setImgPrompt(e.target.value)} placeholder="Ex: Floresta sombria com névoa, dark fantasy..." style={{...S.inp,height:80,resize:'none',fontSize:13}}/><div style={{display:'flex',gap:8,marginTop:14}}><button style={S.btn(genLoading?'var(--gdd-border)':color,'#fff',{flex:1})} onClick={handleGenImg} disabled={genLoading}>{genLoading?'Gerando...':'Gerar e inserir'}</button><button style={S.btn('var(--gdd-border)')} onClick={()=>{setImgModal(false);setImgPrompt('');}} >Cancelar</button></div></div></div>}
       <style>{`[contenteditable]:empty:before{content:attr(data-placeholder);color:var(--gdd-dim);pointer-events:none}[contenteditable] h2{font-size:22px;font-weight:900;color:var(--gdd-text);margin:16px 0 8px}[contenteditable] h3{font-size:17px;font-weight:800;color:var(--gdd-text);margin:14px 0 6px}[contenteditable] h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gdd-muted);margin:12px 0 5px}[contenteditable] p{margin:5px 0}[contenteditable] ul,[contenteditable] ol{padding-left:22px;margin:8px 0}[contenteditable] li{margin:4px 0}[contenteditable] strong,[contenteditable] b{color:var(--gdd-text);font-weight:700}[contenteditable] img{border-radius:8px;margin:8px 0;display:block;cursor:pointer}${imgHoverStyle}[contenteditable] figure{margin:12px 0}[contenteditable] figcaption{font-size:11px;color:var(--gdd-dim);text-align:center;margin-top:4px;font-style:italic}[contenteditable] hr{border:none;border-top:1px solid var(--gdd-border);margin:12px 0}[contenteditable] code{background:var(--gdd-border);padding:2px 5px;border-radius:4px;font-size:11px;font-family:monospace;color:#c084fc}`}</style>
