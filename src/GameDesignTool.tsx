@@ -24,6 +24,7 @@ import { getStoredProjectData, saveStoredProjectData } from "./repositories/proj
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
 import { sendAiMessage } from "./services/ai/aiMessageService";
+import { loadInitialProjects } from "./services/bootstrap/projectBootstrapService";
 import { generateImageUrl } from "./services/image/imageGenerationService";
 import { exportToPDF } from "./utils/gddExport";
 import { scrollTo, todayStr, uid } from "./utils/gameDesignToolRuntime";
@@ -5011,6 +5012,7 @@ function GDDHubInner(){
 
   const [view,setView]=useState<ViewKey>('landing');
   const [projects,setProjects]=useState<Project[]>(()=>getStoredProjects(ECHOES_DEFAULT));
+  const initialProjectsRef=useRef<Project[] | null>(projects);
   const [project,setProject]=useState<Project | null>(null),[module,setModule]=useState<ModuleMeta | null>(null),[activeDoc,setActiveDoc]=useState<Document | null>(null);
   const [pData,setPData]=useState<ProjectData>(()=>getStoredProjectData(PDATA_DEFAULT));
   const [editContent,setEditContent]=useState(''),[hasUnsaved,setHasUnsaved]=useState(false);
@@ -5029,6 +5031,20 @@ function GDDHubInner(){
   useEffect(()=>{const fn=()=>setScrolled(window.scrollY>30);window.addEventListener('scroll',fn);return()=>window.removeEventListener('scroll',fn);},[]);
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
   useEffect(()=>{if(!project&&GUIDED_VIEWS.includes(view))setView('dashboard');},[project,view]);
+  useEffect(()=>{
+    let isMounted=true;
+    loadInitialProjects(ECHOES_DEFAULT).then(initialProjects=>{
+      if(!isMounted)return;
+      setProjects(currentProjects=>{
+        if(currentProjects!==initialProjectsRef.current)return currentProjects;
+        initialProjectsRef.current=null;
+        return initialProjects;
+      });
+    }).catch(error=>{
+      console.error("Failed to load initial projects",error);
+    });
+    return()=>{isMounted=false;};
+  },[]);
 
   // ── Persistência em localStorage ──────────────────────────────────────────
   useEffect(()=>{saveStoredLang(lang);},[lang]);
