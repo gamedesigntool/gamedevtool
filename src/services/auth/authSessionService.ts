@@ -11,6 +11,11 @@ export type AuthSessionObserver = (snapshot: AuthSessionSnapshot) => void;
 
 export type AuthSessionUnsubscribe = () => void;
 
+export type AuthSignOutResult =
+  | { status: "unconfigured" }
+  | { status: "signed-out" }
+  | { status: "error"; error: Error };
+
 const unconfiguredAuthSession: AuthSessionSnapshot = {
   status: "unconfigured",
   session: null,
@@ -63,4 +68,17 @@ export function observeAuthSession(
   return () => {
     subscription.unsubscribe();
   };
+}
+
+export async function signOutAuthSession(): Promise<AuthSignOutResult> {
+  if (!supabaseClient) return { status: "unconfigured" };
+
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+    console.warn("Failed to sign out Supabase auth session", error);
+    return { status: "error", error };
+  }
+
+  return { status: "signed-out" };
 }

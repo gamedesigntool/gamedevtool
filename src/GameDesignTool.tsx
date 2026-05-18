@@ -24,7 +24,7 @@ import { getStoredProjectData, saveStoredProjectData } from "./repositories/proj
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
 import { sendAiMessage } from "./services/ai/aiMessageService";
-import { getCurrentAuthSession, observeAuthSession, type AuthSessionSnapshot } from "./services/auth/authSessionService";
+import { getCurrentAuthSession, observeAuthSession, signOutAuthSession, type AuthSessionSnapshot } from "./services/auth/authSessionService";
 import { loadInitialProjects } from "./services/bootstrap/projectBootstrapService";
 import { generateImageUrl } from "./services/image/imageGenerationService";
 import { exportToPDF } from "./utils/gddExport";
@@ -5013,7 +5013,7 @@ function GDDHubInner(){
 
   const [view,setView]=useState<ViewKey>('landing');
   const [projects,setProjects]=useState<Project[]>(()=>getStoredProjects(ECHOES_DEFAULT));
-  const [,setAuthSession]=useState<AuthSessionSnapshot>({status:'loading',session:null,user:null});
+  const [authSession,setAuthSession]=useState<AuthSessionSnapshot>({status:'loading',session:null,user:null});
   const initialProjectsRef=useRef<Project[] | null>(projects);
   const [project,setProject]=useState<Project | null>(null),[module,setModule]=useState<ModuleMeta | null>(null),[activeDoc,setActiveDoc]=useState<Document | null>(null);
   const [pData,setPData]=useState<ProjectData>(()=>getStoredProjectData(PDATA_DEFAULT));
@@ -5153,6 +5153,10 @@ function GDDHubInner(){
   const getModuleById=(id: string)=>MODULES.find(m=>m.id===id)||null;
   const setLangControl=setLang as Dispatch<SetStateAction<string>>;
   const setThemeControl=setTheme as Dispatch<SetStateAction<string>>;
+  const signOut=async()=>{
+    const result=await signOutAuthSession();
+    if(result.status!=='error')setAuthSession({status:'anonymous',session:null,user:null});
+  };
 
   const Confirm=()=>!confirm||confirm.type==='deleteDoc'?null:(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}}>
@@ -5259,7 +5263,7 @@ function GDDHubInner(){
       <div style={{padding:'0 24px',height:54,borderBottom:'1px solid '+th.border2,display:'flex',alignItems:'center',justifyContent:'space-between',background:th.bg,position:'sticky',top:0,zIndex:20}}>
         <button style={S.back} onClick={()=>setView('landing')}>← Início</button>
         <span style={{fontSize:16,fontWeight:800,background:'linear-gradient(135deg,#a855f7,#22d3ee)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>🎮 Game Design Tool</span>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLangControl}/><ThemeToggle theme={theme} setTheme={setThemeControl}/><button style={S.btn()} onClick={()=>setShowNew(true)}>{t.dash_new}</button></div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}><LangToggle lang={lang} setLang={setLangControl}/><ThemeToggle theme={theme} setTheme={setThemeControl}/>{authSession.status==='authenticated'&&<button style={S.btn('var(--gdd-border)','var(--gdd-muted)',{padding:'7px 12px',fontSize:12})} onClick={signOut}>Sign out</button>}<button style={S.btn()} onClick={()=>setShowNew(true)}>{t.dash_new}</button></div>
       </div>
       <div style={{padding:28}}>
         <h2 style={{margin:'0 0 4px',fontSize:22,fontWeight:700}}>{t.dash_h}</h2>
