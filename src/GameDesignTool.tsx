@@ -5,6 +5,7 @@ import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gam
 import { FB_DEFS, FB_PORTS } from "./features/flowBuilder/flowBuilderConstants";
 import { getSuggestions } from "./features/guides/documentSuggestions";
 import { CLR as COLORS_CLR, GUIDE as COLORS_GUIDE, PRIMARIES as COLORS_PRIMARIES, SECONDARIES as COLORS_SECONDARIES, STEPS as COLORS_STEPS } from "./features/guides/colors/colorsConstants";
+import { DA_ARQUETIPOS, DA_ATRIBUTOS, DA_CLR, DA_GRUPOS_AQ, DA_GRUPOS_AT, DA_GUIDES, DA_STEPS } from "./features/guides/doubleA/doubleAConstants";
 import { CLR as FOUR_KEYS_CLR, GUIDE as FOUR_KEYS_GUIDE, KEYS as FOUR_KEYS_KEYS, STEPS as FOUR_KEYS_STEPS } from "./features/guides/fourKeys/fourKeysConstants";
 import { CLR as OCTALYSIS_CLR, CDS as OCTALYSIS_CDS, GUIDE as OCTALYSIS_GUIDE, STEPS as OCTALYSIS_STEPS } from "./features/guides/octalysis/octalysisConstants";
 import { AESTHETICS as MDA_AESTHETICS, CLR as MDA_CLR, GUIDE as MDA_GUIDE, STEPS as MDA_STEPS } from "./features/guides/mda/mdaConstants";
