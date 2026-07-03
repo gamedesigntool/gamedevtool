@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Component, type ChangeEvent, type Dispatch, type MouseEvent, type SetStateAction } from "react";
+import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { AuthControls } from "./components/auth/AuthControls";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
@@ -101,6 +101,15 @@ type CanvasElement = {
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
 type InsertHtmlRef = { current: ((html: string) => void) | null };
 type EditableDiv = HTMLDivElement & { _init?: boolean };
+type DoubleAAttribute = (typeof DA_ATRIBUTOS)[number];
+type DoubleAArchetype = (typeof DA_ARQUETIPOS)[number];
+type DoubleAGuideProps = {
+  project: Project;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
 const GUIDED_VIEWS: ViewKey[]=[
   'mda-guided','double-a-guided','fourkeys-guided','colors-guided','octalysis-guided',
   'pens-guided','tetrad-guided','ludonarrative-guided','reedsy-wb-guided','unity-ld-guided',
@@ -446,12 +455,12 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
   );
 }
 
-function DoubleAGuide({project,pData,setPData,onBack,onDocCreated}){
+function DoubleAGuide({project,setPData,onBack,onDocCreated}: DoubleAGuideProps){
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Novo Personagem');
   const [mecanica,setMecanica]=useState('');
-  const [selAt,setSelAt]=useState([]);  // até 3 atributos
-  const [selAq,setSelAq]=useState([]);  // até 3 arquétipos
+  const [selAt,setSelAt]=useState<string[]>([]);  // até 3 atributos
+  const [selAq,setSelAq]=useState<string[]>([]);  // até 3 arquétipos
   const [atGrupo,setAtGrupo]=useState(DA_GRUPOS_AT[0]);
   const [aqGrupo,setAqGrupo]=useState(DA_GRUPOS_AQ[0]);
   const [conceito,setConceito]=useState('');
@@ -465,7 +474,7 @@ function DoubleAGuide({project,pData,setPData,onBack,onDocCreated}){
   const [combate,setCombate]=useState('');
   const [nomePersonagem,setNomePersonagem]=useState('');
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[],[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[],[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const [charImgUpload,setCharImgUpload]=useState('');
   const charImgFileRef=useRef<HTMLInputElement | null>(null);
@@ -474,17 +483,21 @@ function DoubleAGuide({project,pData,setPData,onBack,onDocCreated}){
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const toggleAt=nome=>{
+  const isDoubleAAttribute=(value: DoubleAAttribute | undefined): value is DoubleAAttribute=>Boolean(value);
+  const isDoubleAArchetype=(value: DoubleAArchetype | undefined): value is DoubleAArchetype=>Boolean(value);
+  const daInputStyle=S.inp as CSSProperties;
+
+  const toggleAt=(nome: string)=>{
     if(selAt.includes(nome)){setSelAt(s=>s.filter(x=>x!==nome));}
     else if(selAt.length<3){setSelAt(s=>[...s,nome]);}
   };
-  const toggleAq=nome=>{
+  const toggleAq=(nome: string)=>{
     if(selAq.includes(nome)){setSelAq(s=>s.filter(x=>x!==nome));}
     else if(selAq.length<3){setSelAq(s=>[...s,nome]);}
   };
 
-  const getAtObjetos=()=>selAt.map(n=>DA_ATRIBUTOS.find(a=>a.nome===n)).filter(Boolean);
-  const getAqObjetos=()=>selAq.map(n=>DA_ARQUETIPOS.find(a=>a.nome===n)).filter(Boolean);
+  const getAtObjetos=(): DoubleAAttribute[]=>selAt.map(n=>DA_ATRIBUTOS.find(a=>a.nome===n)).filter(isDoubleAAttribute);
+  const getAqObjetos=(): DoubleAArchetype[]=>selAq.map(n=>DA_ARQUETIPOS.find(a=>a.nome===n)).filter(isDoubleAArchetype);
 
   const buildCtx=()=>{
     const atStr=getAtObjetos().map(a=>a.nome+' ('+a.desc+')').join('; ');
@@ -518,17 +531,17 @@ Escreva 2 a 3 frases que capturem a essência do personagem — sua forma de agi
   };
 
 
-  const handleCharImgUpload=(e)=>{
-    const f=e.target.files[0];if(!f)return;
+  const handleCharImgUpload=(e: ChangeEvent<HTMLInputElement>)=>{
+    const f=e.target.files?.[0];if(!f)return;
     const r=new FileReader();
     r.onload=()=>{if(typeof r.result==='string')setCharImgUpload(r.result);};
     r.readAsDataURL(f);
     e.target.value='';
   };
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
+    const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
@@ -579,7 +592,7 @@ ${charImgUpload?`<hr><h2>🖼️ Imagem do Personagem</h2><figure style="margin:
 
   const saveDoc=()=>{
     const pId=project.id,mId='characters';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'double-a'};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'double-a'};
     setPData(p=>{
       const curr=p?.[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
@@ -675,7 +688,7 @@ ${charImgUpload?`<hr><h2>🖼️ Imagem do Personagem</h2><figure style="margin:
                 <div ref={chatEndRef}/>
               </div>
               <div style={{padding:'8px 10px',borderTop:'1px solid var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-                <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+DA_STEPS[step].label.toLowerCase()+'...'} style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+                <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+DA_STEPS[step].label.toLowerCase()+'...'} style={{...daInputStyle,flex:1,fontSize:11,padding:'6px 10px'}}/>
                 <button style={S.btn(aiLoad?'var(--gdd-border)':DA_CLR,'#fff',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
               </div>
             </>
@@ -924,7 +937,7 @@ ${charImgUpload?`<hr><h2>🖼️ Imagem do Personagem</h2><figure style="margin:
                 ].map(({label,val,set,ph})=>(
                   <div key={label}>
                     <div style={{fontSize:10,color:DA_CLR,fontWeight:700,letterSpacing:.5,marginBottom:5,textTransform:'uppercase'}}>{label}</div>
-                    <input value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{...S.inp,width:'100%',boxSizing:'border-box',fontSize:12}}/>
+                    <input value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{...daInputStyle,width:'100%',boxSizing:'border-box',fontSize:12}}/>
                   </div>
                 ))}
               </div>
@@ -5319,6 +5332,7 @@ function GDDHubInner(){
   );
 
   if(view==='double-a-guided')return(
+    !project?null:
     <DoubleAGuide project={project} pData={pData} setPData={setPData}
       onBack={()=>{setCharNewMode(null);setView('module');setModule(getModuleById('characters'));}}
       onDocCreated={(doc: Document)=>{setModule(getModuleById('characters'));openDoc(doc);}}/>
