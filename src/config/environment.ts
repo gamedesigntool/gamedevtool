@@ -1,16 +1,16 @@
 type SupabaseEnvironmentConfig = {
   url: string;
-  anonKey: string;
+  publishableKey: string;
 };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "";
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
 
 export const supabaseEnvironment: SupabaseEnvironmentConfig = {
   url: supabaseUrl,
-  anonKey: supabaseAnonKey,
+  publishableKey: supabasePublishableKey,
 };
 
 export const isSupabaseConfigured =
   supabaseEnvironment.url.trim().length > 0 &&
-  supabaseEnvironment.anonKey.trim().length > 0;
+  supabaseEnvironment.publishableKey.trim().length > 0;
