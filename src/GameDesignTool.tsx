@@ -42,6 +42,10 @@ declare global {
 type ThemeKey = keyof typeof THEMES;
 type LangKey = keyof typeof TR;
 
+type FlowNodeType = keyof typeof FB_DEFS;
+type FlowNodeDef = (typeof FB_DEFS)[FlowNodeType];
+type FlowPort = "top" | "right" | "bottom" | "left";
+
 type FlowNode = {
   id: string;
   type: string;
@@ -63,8 +67,10 @@ type FlowEdge = {
 
 type FlowSelection = { type: "node" | "edge"; id: string } | null;
 type FlowDragging = { id: string; ox: number; oy: number } | null;
-type FlowConnecting = { fromId: string; fromPort: string; ax: number; ay: number; cx: number; cy: number } | null;
+type FlowConnecting = { fromId: string; fromPort: FlowPort; ax: number; ay: number; cx: number; cy: number } | null;
 type FlowPanning = { sx: number; sy: number; sp: CanvasPoint } | null;
+type FbShapeProps = { type: string; w: number; h: number; color: string; sel: boolean };
+type FbNodePreviewProps = { type: FlowNodeType; color: string };
 
 type CanvasPoint = { x: number; y: number };
 type CanvasElementType = "sticky" | "text" | "rect" | "circle" | "image";
@@ -4010,13 +4016,20 @@ function ReedsyWorldbuildingGuide({project,setPData,onBack,onDocCreated}: Reedsy
 
 // ── FlowBuilder ───────────────────────────────────────────────────────────────
 // Calcula w/h da node com base no texto — garante que nenhum label seja truncado
-function fbAutoSize(type, label){
-  const def=FB_DEFS[type];
+const FLOW_PORTS = FB_PORTS as FlowPort[];
+const FALLBACK_FLOW_NODE_TYPE: FlowNodeType = 'process';
+const isFlowNodeType=(type: string): type is FlowNodeType=>Object.prototype.hasOwnProperty.call(FB_DEFS,type);
+const getFlowNodeDef=(type: string): FlowNodeDef=>FB_DEFS[isFlowNodeType(type)?type:FALLBACK_FLOW_NODE_TYPE];
+const isFlowPort=(port?: string): port is FlowPort=>port==='top'||port==='right'||port==='bottom'||port==='left';
+const normalizeFlowPort=(port?: string): FlowPort=>isFlowPort(port)?port:'left';
+
+function fbAutoSize(type: string, label: string): {w: number; h: number}{
+  const def=getFlowNodeDef(type);
   const FONT_W=6.8; // largura aproximada por caractere em px (fonte 12px system-ui)
   const PAD_X=28;   // padding horizontal total
   const PAD_Y=20;   // padding vertical total
   const lines=label.split('\n');
-  const maxChars=Math.max(...lines.map(l=>l.length));
+  const maxChars=Math.max(...lines.map((l: string)=>l.length));
   const rawW=Math.ceil(maxChars*FONT_W)+PAD_X;
   const rawH=lines.length*18+PAD_Y;
   // decisão tem geometria de losango — precisa de mais espaço
@@ -4028,32 +4041,35 @@ function fbAutoSize(type, label){
   };
 }
 
-function fbPortAbs(node,port){
-  const d=FB_DEFS[node.type],w=node.w||d.w,h=node.h||d.h;
-  if(port==='top')    return[node.x+w/2, node.y];
-  if(port==='right')  return[node.x+w,   node.y+h/2];
-  if(port==='bottom') return[node.x+w/2, node.y+h];
+function fbPortAbs(node: FlowNode, port?: string): [number, number]{
+  const d=getFlowNodeDef(node.type),w=node.w||d.w,h=node.h||d.h;
+  const safePort=normalizeFlowPort(port);
+  if(safePort==='top')    return[node.x+w/2, node.y];
+  if(safePort==='right')  return[node.x+w,   node.y+h/2];
+  if(safePort==='bottom') return[node.x+w/2, node.y+h];
   return[node.x,       node.y+h/2];
 }
-function fbPortRel(type,w,h,port){
-  if(port==='top')    return[w/2,0];
-  if(port==='right')  return[w,  h/2];
-  if(port==='bottom') return[w/2,h];
+function fbPortRel(w: number, h: number, port?: string): [number, number]{
+  const safePort=normalizeFlowPort(port);
+  if(safePort==='top')    return[w/2,0];
+  if(safePort==='right')  return[w,  h/2];
+  if(safePort==='bottom') return[w/2,h];
   return[0,h/2];
 }
-function fbEdgePath(n1,fp,n2,tp){
+function fbEdgePath(n1: FlowNode, fp: string | undefined, n2: FlowNode, tp: string | undefined): string{
   const[ax,ay]=fbPortAbs(n1,fp),[bx,by]=fbPortAbs(n2,tp);
   const str=Math.max(60,Math.hypot(ax-bx,ay-by)*0.45);
-  const tang=(p,px,py)=>{
-    if(p==='top')    return[px,py-str];
-    if(p==='bottom') return[px,py+str];
-    if(p==='left')   return[px-str,py];
+  const tang=(p: string | undefined,px: number,py: number): [number, number]=>{
+    const safePort=normalizeFlowPort(p);
+    if(safePort==='top')    return[px,py-str];
+    if(safePort==='bottom') return[px,py+str];
+    if(safePort==='left')   return[px-str,py];
     return[px+str,py];
   };
   const[c1x,c1y]=tang(fp,ax,ay),[c2x,c2y]=tang(tp,bx,by);
   return`M${ax},${ay} C${c1x},${c1y} ${c2x},${c2y} ${bx},${by}`;
 }
-function FbShape({type,w,h,color,sel}){
+function FbShape({type,w,h,color,sel}: FbShapeProps){
   const fill=color+'1e',stroke=sel?color:color+'70',sw=sel?2.5:1.5;
   if(type==='start'||type==='end')
     return (<rect width={w} height={h} rx={h/2} fill={fill} stroke={stroke} strokeWidth={sw}/>);
@@ -4085,7 +4101,7 @@ function FbShape({type,w,h,color,sel}){
   }
   return (<rect width={w} height={h} rx={5} fill={fill} stroke={stroke} strokeWidth={sw}/>);
 }
-function FbNodePreview({type,color}){
+function FbNodePreview({type,color}: FbNodePreviewProps){
   const fill=color+'22',stroke=color+'88';
   if(type==='decision')return (<svg width={22} height={18} viewBox="0 0 22 18"><polygon points="11,1 21,9 11,17 1,9" fill={fill} stroke={stroke} strokeWidth={1.5}/></svg>);
   if(type==='io')return (<svg width={24} height={16} viewBox="0 0 24 16"><polygon points="5,0 24,0 19,16 0,16" fill={fill} stroke={stroke} strokeWidth={1.5}/></svg>);
@@ -4127,9 +4143,9 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
   const saveFlow=useCallback(()=>{
     const mId='flowcharts',pId=project.id;
     const snap=`<p style="color:var(--gdd-muted);font-size:12px">${nodes.length} nó${nodes.length!==1?'s':''} · ${edges.length} conexão${edges.length!==1?'ões':''}</p>`;
-    const updated={...(doc||{}),id:docId.current,title,flowData:{nodes,edges},content:snap,framework:'flowbuilder',updatedAt:todayStr(),status:doc?.status||'progress',createdAt:doc?.createdAt||todayStr()};
+    const updated: Document={...(doc||{}),id:docId.current,title,flowData:{nodes,edges},content:snap,framework:'flowbuilder',updatedAt:todayStr(),status:doc?.status||'progress',createdAt:doc?.createdAt||todayStr()};
     setPData(prev=>{
-      const curr=prev?.[pId]?.[mId]||{docs:[]};
+      const curr=getProjectModuleData(prev,pId,mId);
       const exists=curr.docs.some(d=>d.id===docId.current);
       const docs=exists?curr.docs.map(d=>d.id===docId.current?updated:d):[...curr.docs,updated];
       return{...prev,[pId]:{...(prev?.[pId]||{}),[mId]:{...curr,docs}}};
@@ -4140,7 +4156,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
   useEffect(()=>{setSaved(false);},[nodes,edges,title]);
 
   useEffect(()=>{
-    const h=e=>{
+    const h=(e: globalThis.KeyboardEvent)=>{
       if((e.key==='Delete'||e.key==='Backspace')&&selected&&!editingId&&!editingTitle){
         e.preventDefault();
         if(selected.type==='node'){setNodes(ns=>ns.filter(n=>n.id!==selected.id));setEdges(es=>es.filter(e=>e.from!==selected.id&&e.to!==selected.id));}
@@ -4153,13 +4169,13 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     return()=>window.removeEventListener('keydown',h);
   },[selected,editingId,editingTitle]);
 
-  const toCanvas=e=>{
+  const toCanvas=(e: MouseEvent<Element>): CanvasPoint=>{
     const r=svgRef.current?.getBoundingClientRect();
     if(!r)return{x:0,y:0};
     return{x:(e.clientX-r.left-pan.x)/zoom,y:(e.clientY-r.top-pan.y)/zoom};
   };
 
-  const addNode=type=>{
+  const addNode=(type: FlowNodeType)=>{
     const d=FB_DEFS[type];
     const cx=(svgRef.current?.clientWidth||800)/2,cy=(svgRef.current?.clientHeight||500)/2;
     const x=(cx-pan.x)/zoom-d.w/2,y=(cy-pan.y)/zoom-d.h/2;
@@ -4168,35 +4184,36 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     setSelected({type:'node',id:n.id});
   };
 
-  const onBgDown=e=>{
-    if(e.target===svgRef.current||e.target.dataset.bg){
+  const onBgDown=(e: MouseEvent<SVGSVGElement>)=>{
+    const target=e.target;
+    if(target===svgRef.current||(target instanceof Element&&target.getAttribute('data-bg'))){
       setSelected(null);
       setPanning({sx:e.clientX,sy:e.clientY,sp:{...pan}});
     }
   };
-  const onMove=e=>{
+  const onMove=(e: MouseEvent<SVGSVGElement>)=>{
     if(panning)setPan({x:panning.sp.x+(e.clientX-panning.sx),y:panning.sp.y+(e.clientY-panning.sy)});
     if(dragging){const{x,y}=toCanvas(e);setNodes(ns=>ns.map(n=>n.id===dragging.id?{...n,x:x-dragging.ox,y:y-dragging.oy}:n));}
     if(connecting){const{x,y}=toCanvas(e);setConnecting(c=>c?({...c,cx:x,cy:y}):c);}
   };
-  const onUp=e=>{
+  const onUp=(e: MouseEvent<SVGSVGElement>)=>{
     setPanning(null);setDragging(null);
     if(connecting){
       const{x,y}=toCanvas(e);
-      const target=nodes.find(n=>{const d=FB_DEFS[n.type],w=n.w||d.w,h=n.h||d.h;return x>=n.x&&x<=n.x+w&&y>=n.y&&y<=n.y+h&&n.id!==connecting.fromId;});
+      const target=nodes.find(n=>{const d=getFlowNodeDef(n.type),w=n.w||d.w,h=n.h||d.h;return x>=n.x&&x<=n.x+w&&y>=n.y&&y<=n.y+h&&n.id!==connecting.fromId;});
       if(target){
         // best toPort
-        let bestP='top',bestD=Infinity;
+        let bestP: FlowPort='top',bestD=Infinity;
         const source=nodes.find(n=>n.id===connecting.fromId);
         if(!source){setConnecting(null);return;}
-        FB_PORTS.forEach(tp=>{const[bx,by]=fbPortAbs(target,tp);const[ax,ay]=fbPortAbs(source,connecting.fromPort);const d=Math.hypot(ax-bx,ay-by);if(d<bestD){bestD=d;bestP=tp;}});
+        FLOW_PORTS.forEach(tp=>{const[bx,by]=fbPortAbs(target,tp);const[ax,ay]=fbPortAbs(source,connecting.fromPort);const d=Math.hypot(ax-bx,ay-by);if(d<bestD){bestD=d;bestP=tp;}});
         const dup=edges.some(e=>e.from===connecting.fromId&&e.to===target.id);
         if(!dup)setEdges(es=>[...es,{id:uid(),from:connecting.fromId,to:target.id,fromPort:connecting.fromPort,toPort:bestP}]);
       }
       setConnecting(null);
     }
   };
-  const onNodeDown=(e,nodeId)=>{
+  const onNodeDown=(e: MouseEvent<SVGGElement>,nodeId: string)=>{
     e.stopPropagation();
     if(editingId)return;
     const{x,y}=toCanvas(e);
@@ -4205,7 +4222,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     setSelected({type:'node',id:nodeId});
     setDragging({id:nodeId,ox:x-n.x,oy:y-n.y});
   };
-  const onPortDown=(e,nodeId,port)=>{
+  const onPortDown=(e: MouseEvent<SVGCircleElement>,nodeId: string,port: FlowPort)=>{
     e.stopPropagation();
     const node=nodes.find(n=>n.id===nodeId);
     if(!node)return;
@@ -4213,14 +4230,14 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     setConnecting({fromId:nodeId,fromPort:port,ax,ay,cx:ax,cy:ay});
     setDragging(null);
   };
-  const onNodeDbl=(e,nodeId)=>{
+  const onNodeDbl=(e: MouseEvent<SVGGElement>,nodeId: string)=>{
     e.stopPropagation();
     const n=nodes.find(n=>n.id===nodeId);
     if(!n)return;
     setEditingId(nodeId);setEditLabel(n.label);setDragging(null);
   };
   const commitLabel=()=>{setNodes(ns=>ns.map(n=>{if(n.id!==editingId)return n;const{w,h}=fbAutoSize(n.type,editLabel);return{...n,label:editLabel,w,h};}));setEditingId(null);};
-  const onWheel=e=>{e.preventDefault();setZoom(z=>Math.max(0.25,Math.min(3,z*(e.deltaY>0?.88:1.12))));};
+  const onWheel=(e: WheelEvent<SVGSVGElement>)=>{e.preventDefault();setZoom(z=>Math.max(0.25,Math.min(3,z*(e.deltaY>0?.88:1.12))));};
 
   const selNode=selected?.type==='node'?nodes.find(n=>n.id===selected.id):null;
   const selEdge=selected?.type==='edge'?edges.find(e=>e.id===selected.id):null;
@@ -4285,7 +4302,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
         {/* Sidebar */}
         <div style={{width:154,background:'#09090f',borderRight:'1px solid '+'var(--gdd-border2)',padding:'12px 8px',display:'flex',flexDirection:'column',gap:6,flexShrink:0,overflowY:'auto'}}>
           <div style={{fontSize:9,color:'#334155',fontWeight:700,letterSpacing:1,textTransform:'uppercase',marginBottom:2}}>Formas</div>
-          {Object.entries(FB_DEFS).map(([type,def])=>(
+          {(Object.entries(FB_DEFS) as [FlowNodeType, FlowNodeDef][]).map(([type,def])=>(
             <button key={type} onClick={()=>addNode(type)}
               style={{background:'var(--gdd-bg2)',border:'1px solid '+def.color+'38',borderRadius:8,padding:'7px 9px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,textAlign:'left',transition:'all .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.borderColor=def.color;e.currentTarget.style.background=def.color+'12';}}
@@ -4300,8 +4317,8 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
           {selNode&&(
             <div style={{marginTop:4,borderTop:'1px solid '+'var(--gdd-border2)',paddingTop:8,display:'flex',flexDirection:'column',gap:6}}>
               <div style={{fontSize:9,color:'#334155',fontWeight:700,letterSpacing:1,textTransform:'uppercase'}}>Selecionado</div>
-              <div style={{fontSize:11,color:FB_DEFS[selNode.type].color,fontWeight:700}}>{FB_DEFS[selNode.type].label}</div>
-              <button onClick={()=>{setNodes(ns=>ns.filter(n=>n.id!==selected.id));setEdges(es=>es.filter(e=>e.from!==selected.id&&e.to!==selected.id));setSelected(null);}}
+              <div style={{fontSize:11,color:getFlowNodeDef(selNode.type).color,fontWeight:700}}>{getFlowNodeDef(selNode.type).label}</div>
+              <button onClick={()=>{const selectedNodeId=selNode.id;setNodes(ns=>ns.filter(n=>n.id!==selectedNodeId));setEdges(es=>es.filter(e=>e.from!==selectedNodeId&&e.to!==selectedNodeId));setSelected(null);}}
                 style={S.btn('#3d1515','#f87171',{fontSize:11,padding:'5px 8px',width:'100%',borderRadius:6,border:'1px solid #f8717130'})}>
                 🗑 Excluir nó
               </button>
@@ -4311,7 +4328,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
             <div style={{marginTop:4,borderTop:'1px solid '+'var(--gdd-border2)',paddingTop:8,display:'flex',flexDirection:'column',gap:6}}>
               <div style={{fontSize:9,color:'#334155',fontWeight:700,letterSpacing:1,textTransform:'uppercase'}}>Selecionado</div>
               <div style={{fontSize:11,color:'var(--gdd-dim)'}}>Conexão</div>
-              <button onClick={()=>{setEdges(es=>es.filter(e=>e.id!==selected.id));setSelected(null);}}
+              <button onClick={()=>{const selectedEdgeId=selEdge.id;setEdges(es=>es.filter(e=>e.id!==selectedEdgeId));setSelected(null);}}
                 style={S.btn('#3d1515','#f87171',{fontSize:11,padding:'5px 8px',width:'100%',borderRadius:6,border:'1px solid #f8717130'})}>
                 🗑 Excluir conexão
               </button>
@@ -4353,7 +4370,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
             {connecting&&<line x1={connecting.ax} y1={connecting.ay} x2={connecting.cx} y2={connecting.cy} stroke={CLR} strokeWidth={1.5} strokeDasharray="5 3" markerEnd="url(#fb-arrow-sel)" style={{pointerEvents:'none'}}/>}
             {/* Nodes */}
             {nodes.map(node=>{
-              const d=FB_DEFS[node.type],w=node.w||d.w,h=node.h||d.h;
+              const d=getFlowNodeDef(node.type),w=node.w||d.w,h=node.h||d.h;
               const isSel=selected?.type==='node'&&selected?.id===node.id;
               const isEditing=editingId===node.id;
               const showPorts=isSel||!!connecting;
@@ -4374,8 +4391,8 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
                         {node.label}
                       </text>
                   }
-                  {showPorts&&FB_PORTS.map(port=>{
-                    const[px,py]=fbPortRel(node.type,w,h,port);
+                  {showPorts&&FLOW_PORTS.map(port=>{
+                    const[px,py]=fbPortRel(w,h,port);
                     return (<circle key={port} cx={px} cy={py} r={5}
                       fill={connecting?.fromId===node.id&&connecting?.fromPort===port?CLR:'#1a1a2e'}
                       stroke={d.color} strokeWidth={1.5}
