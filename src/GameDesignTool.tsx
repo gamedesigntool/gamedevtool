@@ -1771,7 +1771,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
   if(!project)return null;
 
   // SVG Color Wheel — the visual identity of this framework
-  const ColorWheel=()=>{
+  const renderColorWheel=()=>{
     const cx=110,cy=110,r1=70,r2=108;
     // 8 segments: Fantasy(top), Purpose(top-right), Progress(right), Reward(bottom-right), Toy(bottom), Struggle(bottom-left), Tension(left), Risk(top-left)
     const segments: {id: Exclude<ColorsValueKey, "structure">; label: string; startDeg: number; color: string}[]=[
@@ -1869,7 +1869,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
           {/* Live wheel */}
           <div style={{padding:'16px',borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',flexDirection:'column',alignItems:'center',gap:10,flexShrink:0}}>
             <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,textTransform:'uppercase',alignSelf:'flex-start'}}>🎨 Mapa de Cores — ao vivo</div>
-            <ColorWheel/>
+            {renderColorWheel()}
             <div style={{display:'flex',gap:10,fontSize:10,color:'var(--gdd-muted)'}}>
               <span><span style={{color:'#e85d9b',fontWeight:700}}>●</span> Primárias</span>
               <span><span style={{color:'#f59e0b',fontWeight:700}}>●</span> Secundárias</span>
@@ -2176,7 +2176,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
   if(!project)return null;
 
   // Octagon SVG
-  const OctagonMap=()=>{
+  const renderOctagonMap=()=>{
     const cx=130,cy=130,maxR=105,minR=18;
     const toR=(a: number)=>a*Math.PI/180;
     const pts=CDs.map(c=>{
@@ -2227,7 +2227,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
   };
 
 
-  const BarIndicator=({label,a,b,colorA,colorB}: {label: string; a: number; b: number; colorA: string; colorB: string})=>{
+  const renderBarIndicator=({label,a,b,colorA,colorB}: {label: string; a: number; b: number; colorA: string; colorB: string})=>{
     const tot=a+b;const pct=tot>0?a/tot:0.5;
     return(
       <div style={{marginBottom:8}}>
@@ -2322,11 +2322,11 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
           {/* Live octagon */}
           <div style={{padding:'14px 16px',borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,flexShrink:0}}>
             <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,textTransform:'uppercase',alignSelf:'flex-start'}}>🔷 Octágono — ao vivo</div>
-            <OctagonMap/>
+            {renderOctagonMap()}
             {totalScore>0&&<>
               <div style={{width:'100%',padding:'0 4px'}}>
-                <BarIndicator label="☀️ White Hat/🌑 Black Hat" a={whiteScore} b={blackScore} colorA="#a78bfa" colorB="#ef4444"/>
-                <BarIndicator label="◀ Left Brain/▶ Right Brain" a={leftScore} b={rightScore} colorA="#fbbf24" colorB="#34d399"/>
+                {renderBarIndicator({label:"☀️ White Hat/🌑 Black Hat", a:whiteScore, b:blackScore, colorA:"#a78bfa", colorB:"#ef4444"})}
+                {renderBarIndicator({label:"◀ Left Brain/▶ Right Brain", a:leftScore, b:rightScore, colorA:"#fbbf24", colorB:"#34d399"})}
               </div>
               <div style={{fontSize:10,color:'var(--gdd-muted)',textAlign:'center'}}>{activeCDs.length} drive{activeCDs.length!==1?'s':''} ativa{activeCDs.length!==1?'s':''} · score {totalScore}</div>
             </>}
@@ -2418,8 +2418,8 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
             {/* Score summary */}
             <div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border2)',borderRadius:12,padding:'16px 18px'}}>
               <div style={{fontWeight:700,fontSize:13,color:'var(--gdd-muted)',marginBottom:14}}>⚖️ Balanço atual do seu design</div>
-              <BarIndicator label="☀️ White Hat/🌑 Black Hat" a={whiteScore} b={blackScore} colorA="#a78bfa" colorB="#ef4444"/>
-              <BarIndicator label="◀ Left Brain/▶ Right Brain" a={leftScore} b={rightScore} colorA="#fbbf24" colorB="#34d399"/>
+              {renderBarIndicator({label:"☀️ White Hat/🌑 Black Hat", a:whiteScore, b:blackScore, colorA:"#a78bfa", colorB:"#ef4444"})}
+              {renderBarIndicator({label:"◀ Left Brain/▶ Right Brain", a:leftScore, b:rightScore, colorA:"#fbbf24", colorB:"#34d399"})}
               <div style={{marginTop:10,fontSize:11,color:'var(--gdd-muted)',lineHeight:1.65}}>
                 {totalScore===0?'Nenhuma drive ativa ainda.':`Score total: ${totalScore} pontos em ${activeCDs.length} drives ativas. `}
                 {whiteScore>0&&blackScore===0&&'⚠️ Apenas White Hat — pode faltar urgência. Considere adicionar Scarcity ou Unpredictability.'}
@@ -2583,7 +2583,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
   if(!project)return null;
 
   // Pentagon radar SVG
-  const PentagonRadar=()=>{
+  const renderPentagonRadar=()=>{
     const cx=110,cy=115,maxR=85;
     const toR=(a: number)=>a*Math.PI/180;
     // 5 vertices: top, upper-right, lower-right, lower-left, upper-left
@@ -2693,7 +2693,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
           {/* Live radar */}
           <div style={{padding:'14px 16px',borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,flexShrink:0}}>
             <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,textTransform:'uppercase',alignSelf:'flex-start'}}>🧠 Radar PENS — ao vivo</div>
-            <PentagonRadar/>
+            {renderPentagonRadar()}
             <div style={{width:'100%',display:'flex',flexDirection:'column',gap:3,paddingTop:2}}>
               {COMPONENTS.map(c=>(
                 <div key={c.id} style={{display:'flex',alignItems:'center',gap:6,opacity:filled(c.id)?1:0.35}}>
@@ -2982,7 +2982,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
   if(!project)return null;
 
   // Diamond SVG — live visualization
-  const DiamondViz=()=>{
+  const renderDiamondViz=()=>{
     // positions: aesthetics=top, mechanics=left, story=right, technology=bottom
     const cx=110,cy=110;
     const pts={
@@ -3106,7 +3106,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
           {/* Live diamond */}
           <div style={{padding:'14px 16px',borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,flexShrink:0}}>
             <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,textTransform:'uppercase',alignSelf:'flex-start'}}>◈ Diamante — ao vivo</div>
-            <DiamondViz/>
+            {renderDiamondViz()}
             <div style={{width:'100%',display:'flex',flexDirection:'column',gap:4}}>
               {/* harmony meter */}
               <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -3367,7 +3367,7 @@ Responda em português brasileiro. Use exemplos de jogos conhecidos.`;
   };
 
   // ── Live Ludonarrative Loop SVG ──────────────────────────────────────────────
-  const LoopViz=()=>{
+  const renderLoopViz=()=>{
     const nodes=[
       {id:'mechanic',  label: cur.mechanic||'Mecânica',  icon:'🎮', cx:100, cy:28,  color:'#fbbf24'},
       {id:'narrative', label: cur.narrative||'Narrativa', icon:'📖', cx:178, cy:100, color:'#34d399'},
@@ -3520,7 +3520,7 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
           {/* Loop viz */}
           <div style={{padding:'14px 16px',borderBottom:'1px solid '+'var(--gdd-border2)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,flexShrink:0}}>
             <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,textTransform:'uppercase',alignSelf:'flex-start'}}>📖 Loop Ludonarrativo — ao vivo</div>
-            <LoopViz/>
+            {renderLoopViz()}
             <div style={{width:'100%',display:'flex',flexDirection:'column',gap:4}}>
               <div style={{display:'flex',alignItems:'center',gap:6}}>
                 <span style={{fontSize:10,color:'var(--gdd-muted)',whiteSpace:'nowrap'}}>Loops:</span>
