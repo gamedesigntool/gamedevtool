@@ -5080,20 +5080,31 @@ function KanbanBoard({project,pData,setPData,onBack}: KanbanProps){
 }
 
 // ── GDDExporter ───────────────────────────────────────────────────────────────
-function GDDExporter({project,pData,onClose,lang='pt',theme='dark'}){
+type GDDExporterProps = {
+  project: Project;
+  pData: ProjectData;
+  onClose: () => void;
+  lang?: LangKey;
+  theme?: ThemeKey;
+};
+type GDDExporterModuleSelection = { checked?: boolean; docs: Record<DocumentId, boolean> };
+type GDDExporterSelection = Record<string, GDDExporterModuleSelection | undefined>;
+type GDDExporterSection = { mod: ModuleMeta; docs: Document[] };
+
+function GDDExporter({project,pData,onClose,lang='pt',theme='dark'}: GDDExporterProps){
   const t=TR[lang]||TR.pt;
   const th=THEMES[theme]||THEMES.dark;
   const S=mkS(th);
-  const STATUS_L={ progress:{label:t.st_progress,color:'#fbbf24',bg:'#fbbf2415'}, done:{label:t.st_done,color:'#34d399',bg:'#34d39915'} };
-  const EXPORT_MODS=(MODULES_I18N[lang]||MODULES).filter(m=>m.id!=='brainstorming'&&m.id!=='production');
-  const [sel,setSel]=useState(()=>{
-    const init={};EXPORT_MODS.forEach(m=>{const docs=pData?.[project.id]?.[m.id]?.docs||[];if(docs.length>0)init[m.id]={checked:true,docs:Object.fromEntries(docs.map(d=>[d.id,true]))};});return init;
+  const STATUS_L: Record<Document['status'], {label: string; color: string; bg: string}>={ progress:{label:t.st_progress,color:'#fbbf24',bg:'#fbbf2415'}, done:{label:t.st_done,color:'#34d399',bg:'#34d39915'} };
+  const EXPORT_MODS: ModuleMeta[]=(MODULES_I18N[lang]||MODULES).filter(m=>m.id!=='brainstorming'&&m.id!=='production');
+  const [sel,setSel]=useState<GDDExporterSelection>(()=>{
+    const init: GDDExporterSelection={};EXPORT_MODS.forEach(m=>{const docs=getProjectModuleDocuments(pData,project.id,m.id);if(docs.length>0)init[m.id]={checked:true,docs:Object.fromEntries(docs.map(d=>[d.id,true]))};});return init;
   });
-  const toggleMod=mId=>setSel(s=>({...s,[mId]:s[mId]?{...s[mId],checked:!s[mId].checked}:{checked:true,docs:{}}}));
-  const toggleDoc=(mId,dId)=>setSel(s=>({...s,[mId]:{...s[mId],docs:{...s[mId]?.docs,[dId]:!s[mId]?.docs?.[dId]}}}));
-  const total=EXPORT_MODS.reduce((acc,m)=>{if(!sel[m.id]?.checked)return acc;return acc+(pData?.[project.id]?.[m.id]?.docs||[]).filter(d=>sel[m.id]?.docs?.[d.id]).length;},0);
+  const toggleMod=(mId: string)=>setSel(s=>({...s,[mId]:s[mId]?{...s[mId],checked:!s[mId].checked}:{checked:true,docs:{}}}));
+  const toggleDoc=(mId: string,dId: DocumentId)=>setSel(s=>({...s,[mId]:{...s[mId],docs:{...s[mId]?.docs,[dId]:!s[mId]?.docs?.[dId]}}}));
+  const total=EXPORT_MODS.reduce<number>((acc,m)=>{if(!sel[m.id]?.checked)return acc;return acc+getProjectModuleDocuments(pData,project.id,m.id).filter(d=>sel[m.id]?.docs?.[d.id]).length;},0);
   const doExport=()=>{
-    const sections=[];EXPORT_MODS.forEach(m=>{if(!sel[m.id]?.checked)return;const docs=(pData?.[project.id]?.[m.id]?.docs||[]).filter(d=>sel[m.id]?.docs?.[d.id]&&m.id!=='flowcharts'||sel[m.id]?.docs?.[d.id]);if(docs.length)sections.push({mod:m,docs});});
+    const sections: GDDExporterSection[]=[];EXPORT_MODS.forEach(m=>{if(!sel[m.id]?.checked)return;const docs=getProjectModuleDocuments(pData,project.id,m.id).filter(d=>sel[m.id]?.docs?.[d.id]&&m.id!=='flowcharts'||sel[m.id]?.docs?.[d.id]);if(docs.length)sections.push({mod:m,docs});});
     exportToPDF(project,sections);onClose();
   };
   return(
@@ -5106,7 +5117,7 @@ function GDDExporter({project,pData,onClose,lang='pt',theme='dark'}){
         <div style={{flex:1,overflowY:'auto',padding:'14px 18px',display:'flex',flexDirection:'column',gap:8}}>
           <div style={{fontSize:12,color:'var(--gdd-muted)',marginBottom:4}}>Selecione módulos e documentos a incluir:</div>
           {EXPORT_MODS.map(m=>{
-            const docs=pData?.[project.id]?.[m.id]?.docs||[],mSel=sel[m.id];
+            const docs=getProjectModuleDocuments(pData,project.id,m.id),mSel=sel[m.id];
             return(
               <div key={m.id} style={{background:'var(--gdd-bg)',border:'1px solid '+(mSel?.checked?m.color+'44':'var(--gdd-border2)'),borderRadius:10,overflow:'hidden',transition:'border-color .2s'}}>
                 <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',cursor:'pointer'}} onClick={()=>toggleMod(m.id)}>
