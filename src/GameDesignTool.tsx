@@ -207,7 +207,11 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
     if(options?.onlyIfChanged&&html===value)return;
     onChange(html);
   },[onChange,value]);
-  useEffect(()=>{if(edRef.current&&!edRef.current._init){edRef.current.innerHTML=value||'';edRef.current._init=true;}},[]);
+  useEffect(()=>{
+    if(edRef.current&&!edRef.current._init){edRef.current.innerHTML=value||'';edRef.current._init=true;}
+    // DocEditor is an uncontrolled contentEditable; activeDoc.id remounts it for document changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
   useEffect(()=>{if(!insertRef)return;insertRef.current=html=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<hr>'+html);syncFromDom();};return()=>{if(insertRef.current)insertRef.current=null;};},[insertRef,syncFromDom]);
   const exec=(cmd:string,val?:string)=>{document.execCommand(cmd,false,val);edRef.current?.focus();syncFromDom();tick(n=>n+1);};
   const qState=(cmd: string)=>{try{return document.queryCommandState(cmd);}catch{return false;}};
