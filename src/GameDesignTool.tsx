@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type MouseEvent, type SetStateAction } from "react";
+import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type ErrorInfo, type MouseEvent, type ReactNode, type SetStateAction } from "react";
 import { AuthControls } from "./components/auth/AuthControls";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
@@ -17,7 +17,7 @@ import { CLR as LUDONARRATIVE_CLR, GUIDE as LUDONARRATIVE_GUIDE, STEPS as LUDONA
 import { KANBAN_COLS, PROD_CLR, TASK_CATS, TASK_PRIO } from "./features/production/productionConstants";
 import { appendDocumentMessageInProjectData, setDocumentMessagesInProjectData } from "./domain/documentMessageMutations";
 import { addDocumentToModule, deleteDocumentFromModule, renameDocumentInModule, toggleDocumentStatusInModule, updateDocumentContent } from "./domain/documentMutations";
-import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, StatusKey, ViewKey } from "./domain/gameDesignToolTypes";
+import type { ChatMessage, ConfirmState, Document, DocumentId, DocumentModuleData, MechanicNewMode, ModeChoice, ModuleMeta, Project, ProjectData, ProjectId, ProjectModuleData, ViewKey } from "./domain/gameDesignToolTypes";
 import { addProject, cloneProjectInList, createProjectEntity, removeProject } from "./domain/projectMutations";
 import { setProjectModuleData } from "./domain/projectDataMutations";
 import { getProjectModuleData, getProjectModuleDocuments } from "./domain/projectDataSelectors";
@@ -61,26 +61,10 @@ type FlowEdge = {
   label?: string;
 };
 
-type FlowData = {
-  nodes: FlowNode[];
-  edges: FlowEdge[];
-};
-
 type FlowSelection = { type: "node" | "edge"; id: string } | null;
 type FlowDragging = { id: string; ox: number; oy: number } | null;
 type FlowConnecting = { fromId: string; fromPort: string; ax: number; ay: number; cx: number; cy: number } | null;
 type FlowPanning = { sx: number; sy: number; sp: CanvasPoint } | null;
-
-type ProductionTask = {
-  id: string;
-  title: string;
-  desc: string;
-  priority: string;
-  category: string;
-  column: string;
-  createdAt: string;
-  updatedAt?: string | null;
-};
 
 type CanvasPoint = { x: number; y: number };
 type CanvasStroke = { id: string; points: CanvasPoint[]; color: string; width: number };
@@ -101,6 +85,16 @@ type CanvasElement = {
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
 type InsertHtmlRef = { current: ((html: string) => void) | null };
 type EditableDiv = HTMLDivElement & { _init?: boolean };
+type SharedStyles = {
+  app: CSSProperties;
+  btn: (bg?: string, c?: string, ex?: CSSProperties) => CSSProperties;
+  card: (clr: string) => CSSProperties;
+  grid: (min?: number) => CSSProperties;
+  inp: CSSProperties;
+  back: CSSProperties;
+};
+type GDTErrorBoundaryProps = { children: ReactNode };
+type GDTErrorBoundaryState = { hasError: boolean; error: Error | null };
 type DoubleAAttribute = (typeof DA_ATRIBUTOS)[number];
 type DoubleAArchetype = (typeof DA_ARQUETIPOS)[number];
 type DoubleAGuideProps = {
@@ -118,20 +112,20 @@ const GUIDED_VIEWS: ViewKey[]=[
 // ── Fallback global para erros antes do React montar ─────────────────────────
 if(typeof window !== 'undefined'){
   window.__gdt_loaded = false;
-  window.onerror = function(msg, src, line, col, err){
+  window.onerror = function(msg: string | Event, _src?: string, _line?: number, _col?: number, err?: Error): boolean{
     if(window.__gdt_loaded) return false; // React já montou — ErrorBoundary cuida
     document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#07070f;font-family:system-ui,sans-serif;color:#e2e8f0;text-align:center;padding:32px;box-sizing:border-box;';
-    document.body.innerHTML = '<div><div style="font-size:48px;margin-bottom:16px">⚠️</div><div style="font-size:20px;font-weight:700;color:#f87171;margin-bottom:12px">Erro ao carregar</div><div style="color:#64748b;font-size:14px;max-width:400px;line-height:1.7;margin-bottom:24px">Ocorreu um erro inesperado ao inicializar a plataforma.</div><button onclick="location.reload()" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer">🔄 Recarregar</button><details style="margin-top:16px;font-size:11px;color:#334155;max-width:500px"><summary style="cursor:pointer;color:#475569">Detalhes</summary>'+(err?.message||msg)+'</details></div>';
+    document.body.innerHTML = '<div><div style="font-size:48px;margin-bottom:16px">⚠️</div><div style="font-size:20px;font-weight:700;color:#f87171;margin-bottom:12px">Erro ao carregar</div><div style="color:#64748b;font-size:14px;max-width:400px;line-height:1.7;margin-bottom:24px">Ocorreu um erro inesperado ao inicializar a plataforma.</div><button onclick="location.reload()" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer">🔄 Recarregar</button><details style="margin-top:16px;font-size:11px;color:#334155;max-width:500px"><summary style="cursor:pointer;color:#475569">Detalhes</summary>'+(err?.message||String(msg))+'</details></div>';
     return false;
   };
   // Marca que React montou — desativa o fallback
   setTimeout(()=>{ window.__gdt_loaded = true; }, 5000);
 }
 
-const mkS=(th)=>({
+const mkS=(_th: (typeof THEMES)[ThemeKey]): SharedStyles=>({
   app: {minHeight:'100vh',background:'var(--gdd-bg)',color:'var(--gdd-text)',fontFamily:'system-ui,sans-serif',fontSize:14},
   btn: (bg='#7c3aed',c='#fff',ex={})=>({background:bg,color:c,border:'none',borderRadius:8,padding:'8px 16px',cursor:'pointer',fontWeight:700,fontSize:13,...ex}),
-  card: clr=>({background:'var(--gdd-bg2)',border:`1px solid ${clr}28`,borderRadius:14,padding:20,cursor:'pointer',transition:'all .2s',position:'relative',overflow:'hidden'}),
+  card: (clr: string)=>({background:'var(--gdd-bg2)',border:`1px solid ${clr}28`,borderRadius:14,padding:20,cursor:'pointer',transition:'all .2s',position:'relative',overflow:'hidden'}),
   grid: (min=260)=>({display:'grid',gridTemplateColumns:`repeat(auto-fill,minmax(${min}px,1fr))`,gap:16}),
   inp: {background:'var(--gdd-bg3)',border:'1px solid '+'var(--gdd-border)',borderRadius:8,padding:'10px 14px',color:'var(--gdd-text)',fontSize:14,outline:'none',width:'100%',boxSizing:'border-box'},
   back: {background:'none',border:'1px solid '+'var(--gdd-border)',color:'var(--gdd-muted)',borderRadius:6,padding:'5px 12px',cursor:'pointer',fontSize:12},
@@ -168,7 +162,7 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
   useEffect(()=>{if(edRef.current&&!edRef.current._init){edRef.current.innerHTML=value||'';edRef.current._init=true;}},[]);
   useEffect(()=>{if(!insertRef)return;insertRef.current=html=>{const el=edRef.current;if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();if(!s)return;s.removeAllRanges();s.addRange(r);document.execCommand('insertHTML',false,'<hr>'+html);syncFromDom();};return()=>{if(insertRef.current)insertRef.current=null;};},[insertRef,syncFromDom]);
   const exec=(cmd:string,val?:string)=>{document.execCommand(cmd,false,val);edRef.current?.focus();syncFromDom();tick(n=>n+1);};
-  const qState=(cmd: string)=>{try{return document.queryCommandState(cmd);}catch(e){return false;}};
+  const qState=(cmd: string)=>{try{return document.queryCommandState(cmd);}catch{return false;}};
   const handleClick=(e: MouseEvent<HTMLDivElement>)=>{if(e.target instanceof HTMLImageElement)setSelImg(e.target);else setSelImg(null);};
   const handleUpload=(e: ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const result=typeof r.result==='string'?r.result:'';if(!result)return;edRef.current?.focus();document.execCommand('insertHTML',false,'<br><img src="'+result+'" alt="'+f.name+'" style="max-width:100%;border-radius:8px;margin:8px 0;display:block"><br>');syncFromDom();};r.readAsDataURL(f);e.target.value='';};
   const handleGenImg=async()=>{
@@ -5123,15 +5117,15 @@ function GDDExporter({project,pData,onClose,lang='pt',theme='dark'}){
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 // ── Error Boundary ────────────────────────────────────────────────────────────
-class GDTErrorBoundary extends Component {
-  constructor(props){
+class GDTErrorBoundary extends Component<GDTErrorBoundaryProps, GDTErrorBoundaryState> {
+  constructor(props: GDTErrorBoundaryProps){
     super(props);
     this.state={hasError:false,error:null};
   }
-  static getDerivedStateFromError(error){
+  static getDerivedStateFromError(error: Error): GDTErrorBoundaryState{
     return{hasError:true,error};
   }
-  componentDidCatch(error,info){
+  componentDidCatch(error: Error, info: ErrorInfo){
     console.error('[GameDesignTool] Erro capturado:',error,info);
   }
   render(){
