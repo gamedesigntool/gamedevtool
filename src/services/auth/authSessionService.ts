@@ -22,6 +22,17 @@ export type AuthSignInResult =
   | { status: "authenticated"; snapshot: Extract<AuthSessionSnapshot, { status: "authenticated" }> }
   | { status: "error"; error: Error };
 
+export type AuthSignUpResult =
+  | { status: "unconfigured" }
+  | { status: "signed-up" }
+  | { status: "authenticated"; snapshot: Extract<AuthSessionSnapshot, { status: "authenticated" }> }
+  | { status: "error"; error: Error };
+
+export type AuthPasswordResetResult =
+  | { status: "unconfigured" }
+  | { status: "sent" }
+  | { status: "error"; error: Error };
+
 const unconfiguredAuthSession: AuthSessionSnapshot = {
   status: "unconfigured",
   session: null,
@@ -99,6 +110,48 @@ export async function signInWithEmailPassword(
   }
 
   return { status: "anonymous" };
+}
+
+export async function signUpWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<AuthSignUpResult> {
+  if (!supabaseClient) return { status: "unconfigured" };
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.warn("Failed to sign up with Supabase auth", error);
+    return { status: "error", error };
+  }
+
+  const snapshot = toAuthSessionSnapshot(data.session);
+
+  if (snapshot.status === "authenticated") {
+    return { status: "authenticated", snapshot };
+  }
+
+  return { status: "signed-up" };
+}
+
+export async function sendPasswordResetEmail(
+  email: string,
+): Promise<AuthPasswordResetResult> {
+  if (!supabaseClient) return { status: "unconfigured" };
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+
+  if (error) {
+    console.warn("Failed to send Supabase password reset email", error);
+    return { status: "error", error };
+  }
+
+  return { status: "sent" };
 }
 
 export async function signOutAuthSession(): Promise<AuthSignOutResult> {
