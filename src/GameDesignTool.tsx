@@ -1964,16 +1964,35 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
 }
 
 // ── OctalysisGuide ────────────────────────────────────────────────────────────
-function OctalysisGuide({project,pData,setPData,onBack,onDocCreated}){
-  const CLR=OCTALYSIS_CLR;
-  const CDs=OCTALYSIS_CDS;
+type OctalysisGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type OctalysisCdId = "cd1" | "cd2" | "cd3" | "cd4" | "cd5" | "cd6" | "cd7" | "cd8";
+type OctalysisSide = "white" | "black" | "neutral";
+type OctalysisBrain = "left" | "right";
+type OctalysisCoreDrive = Omit<(typeof OCTALYSIS_CDS)[number], "id" | "side" | "brain"> & {
+  id: OctalysisCdId;
+  side: OctalysisSide;
+  brain: OctalysisBrain;
+};
+type OctalysisCdData = {
+  active: boolean;
+  intensity: number;
+  impl: string;
+};
+type OctalysisCdDataById = Record<OctalysisCdId, OctalysisCdData>;
+type OctalysisPhaseKey = "early" | "mid" | "late";
+type OctalysisPhaseNotes = Record<OctalysisPhaseKey, string>;
 
-  // Positions on octagon for SVG
-  const OCT_CX=130,OCT_CY=130,OCT_R=95;
-  const cdPos=(angle)=>{
-    const r=angle*Math.PI/180;
-    return{x:OCT_CX+OCT_R*Math.cos(r),y:OCT_CY+OCT_R*Math.sin(r)};
-  };
+function OctalysisGuide({project,setPData,onBack,onDocCreated}: OctalysisGuideProps){
+  if(!project)return null;
+
+  const CLR=OCTALYSIS_CLR;
+  const CDs=OCTALYSIS_CDS as OctalysisCoreDrive[];
 
   const STEPS=OCTALYSIS_STEPS;
   const GUIDE=OCTALYSIS_GUIDE;
@@ -1987,17 +2006,17 @@ function OctalysisGuide({project,pData,setPData,onBack,onDocCreated}){
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Nova Mecânica — Octalysis');
   // Per-CD: activated (bool), intensity (0-10), implementation text
-  const [cdData,setCdData]=useState(()=>Object.fromEntries(CDs.map(c=>[c.id,{active:false,intensity:5,impl:''}])));
-  const [phaseNotes,setPhaseNotes]=useState({early:'',mid:'',late:''});
+  const [cdData,setCdData]=useState<OctalysisCdDataById>(()=>Object.fromEntries(CDs.map(c=>[c.id,{active:false,intensity:5,impl:''}])) as OctalysisCdDataById);
+  const [phaseNotes,setPhaseNotes]=useState<OctalysisPhaseNotes>({early:'',mid:'',late:''});
   const [balanceNote,setBalanceNote]=useState('');
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const setCd=(id,field,val)=>setCdData(d=>({...d,[id]:{...d[id],[field]:val}}));
+  const setCd=<K extends keyof OctalysisCdData>(id: OctalysisCdId,field: K,val: OctalysisCdData[K])=>setCdData(d=>({...d,[id]:{...d[id],[field]:val}}));
   const activeCDs=CDs.filter(c=>cdData[c.id].active);
   const whiteActive=CDs.filter(c=>c.side==='white'&&cdData[c.id].active);
   const blackActive=CDs.filter(c=>c.side==='black'&&cdData[c.id].active);
@@ -2017,10 +2036,10 @@ Core Drives ativas: ${activeCDs.map(c=>`CD${c.n} ${c.label} (intensidade ${cdDat
 Score total: ${totalScore} | White Hat: ${whiteScore} | Black Hat: ${blackScore} | Left Brain: ${leftScore} | Right Brain: ${rightScore}
 Guie com base no framework Octalysis. Foque em Human-Focused Design e no equilíbrio entre as drives. Responda em português brasileiro.`;
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
-    const curr=[...aiMsgs[step],um];
+    const um: ChatMessage={role:'user',content:txt};
+    const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
@@ -2031,7 +2050,6 @@ Guie com base no framework Octalysis. Foque em Human-Focused Design e no equilí
 
   const compileHtml=()=>{
     const cdBlocks=activeCDs.map(c=>`<h3>${c.icon} CD${c.n}: ${c.label} <em style="font-size:11px;color:#64748b">(${c.side==='white'?'☀️ White Hat':c.side==='black'?'🌑 Black Hat':'⚪ Neutro'} · ${c.brain==='left'?'◀ Left Brain':'▶ Right Brain'} · Intensidade ${cdData[c.id].intensity}/10)</em></h3><p>${cdData[c.id].impl||'—'}</p>`).join('');
-    const bar=pct=>'█'.repeat(Math.round(pct/10))+'░'.repeat(10-Math.round(pct/10));
     return `<h2>🔷 Octalysis Framework — ${docTitle}</h2>
 <p><em>Documento estruturado com o Octalysis Framework de Yu-kai Chou</em></p><hr>
 <h2>🔷 Core Drives Ativas (${activeCDs.length}/8)</h2>${cdBlocks}<hr>
@@ -2048,7 +2066,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
 
   const saveDoc=()=>{
     const pId=project.id,mId='mechanics';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'octalysis'};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'octalysis'};
     setPData(p=>{
       const curr=p?.[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
@@ -2069,7 +2087,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
   // Octagon SVG
   const OctagonMap=()=>{
     const cx=130,cy=130,maxR=105,minR=18;
-    const toR=a=>a*Math.PI/180;
+    const toR=(a: number)=>a*Math.PI/180;
     const pts=CDs.map(c=>{
       const a=c.pos.angle;
       const cd=cdData[c.id];
@@ -2118,7 +2136,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
   };
 
 
-  const BarIndicator=({label,a,b,colorA,colorB})=>{
+  const BarIndicator=({label,a,b,colorA,colorB}: {label: string; a: number; b: number; colorA: string; colorB: string})=>{
     const tot=a+b;const pct=tot>0?a/tot:0.5;
     return(
       <div style={{marginBottom:8}}>
@@ -2134,7 +2152,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
     );
   };
 
-  const CDCard=({c,compact=false})=>{
+  const CDCard=({c}: {c: OctalysisCoreDrive})=>{
     const cd=cdData[c.id];
     return(
       <div key={c.id} style={{background:'var(--gdd-bg2)',border:'1px solid '+(cd.active?c.color+'55':'var(--gdd-border2)'),borderRadius:12,padding:'14px 16px',transition:'border-color .2s'}}>
@@ -2253,7 +2271,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:'7px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre Octalysis..." style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre Octalysis..." style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
               <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
             </div>
           </>)}
@@ -2326,11 +2344,11 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
             {/* Phase notes */}
             <div style={{background:'var(--gdd-bg2)',border:'1px solid '+'var(--gdd-border2)',borderRadius:12,padding:'16px 18px'}}>
               <div style={{fontWeight:700,fontSize:13,color:'var(--gdd-muted)',marginBottom:14}}>🗓️ Drives por fase do jogo</div>
-              {[
+              {([
                 {key:'early',icon:'🌱',label:'Onboarding / horas iniciais',placeholder:'Quais drives dominam quando o jogador começa? Ex: CD1 (Epic Meaning) para engajar, CD2 (Accomplishment) para recompensar as primeiras conquistas, CD7 (Curiosidade) para criar mistério inicial...'},
                 {key:'mid',  icon:'🔥',label:'Mid-game',placeholder:'Como as drives evoluem no meio do jogo? Ex: CD3 (Criatividade) começa a emergir conforme o jogador ganha maestria; CD5 (Social) se torna mais importante em guilds e PvP...'},
                 {key:'late', icon:'🏆',label:'Endgame / retenção de longo prazo',placeholder:'O que mantém o jogador após centenas de horas? Ex: CD4 (Ownership) de colecionáveis raros; CD1 (Epic Meaning) de status de veterano; CD3 (Criatividade) no meta-game...'},
-              ].map(({key,icon,label,placeholder})=>(
+              ] satisfies {key: OctalysisPhaseKey; icon: string; label: string; placeholder: string}[]).map(({key,icon,label,placeholder})=>(
                 <div key={key} style={{marginBottom:14}}>
                   <div style={{fontSize:10,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:'uppercase'}}>{icon} {label}</div>
                   <TA value={phaseNotes[key]} onChange={v=>setPhaseNotes(p=>({...p,[key]:v}))} placeholder={placeholder} rows={3}/>
