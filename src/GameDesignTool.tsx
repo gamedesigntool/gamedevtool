@@ -1273,9 +1273,24 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
 }
 
 // ── FourKeysGuide ─────────────────────────────────────────────────────────────
-function FourKeysGuide({project,pData,setPData,onBack,onDocCreated}){
+type FourKeysGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type FourKeyId = "hardfun" | "easyfun" | "alteredstates" | "peoplefactor";
+type FourKeyPriority = "primary" | "secondary";
+type FourKey = Omit<(typeof FOUR_KEYS_KEYS)[number], "id"> & {id: FourKeyId};
+type FourKeyPriorityMap = Partial<Record<FourKeyId, FourKeyPriority>>;
+type FourKeyTextMap = Partial<Record<FourKeyId, string>>;
+
+function FourKeysGuide({project,setPData,onBack,onDocCreated}: FourKeysGuideProps){
+  if(!project)return null;
+
   const CLR=FOUR_KEYS_CLR;
-  const KEYS=FOUR_KEYS_KEYS;
+  const KEYS=FOUR_KEYS_KEYS as FourKey[];
   const STEPS=FOUR_KEYS_STEPS;
   const GUIDE=FOUR_KEYS_GUIDE;
   const AI_HINTS=[
@@ -1286,25 +1301,25 @@ function FourKeysGuide({project,pData,setPData,onBack,onDocCreated}){
 
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Nova Mecânica — 4 Keys');
-  const [selKeys,setSelKeys]=useState([]);      // ids das chaves ativas
-  const [keyPriority,setKeyPriority]=useState({}); // id -> 'primary'|'secondary'
+  const [selKeys,setSelKeys]=useState<FourKeyId[]>([]);      // ids das chaves ativas
+  const [keyPriority,setKeyPriority]=useState<FourKeyPriorityMap>({}); // id -> 'primary'|'secondary'
   const [playerProfile,setPlayerProfile]=useState('');
-  const [emotionMap,setEmotionMap]=useState({}); // keyId -> texto
-  const [triggerMap,setTriggerMap]=useState({}); // keyId -> texto
-  const [objectMap,setObjectMap]=useState({});   // keyId -> texto
+  const [emotionMap,setEmotionMap]=useState<FourKeyTextMap>({}); // keyId -> texto
+  const [triggerMap,setTriggerMap]=useState<FourKeyTextMap>({}); // keyId -> texto
+  const [objectMap,setObjectMap]=useState<FourKeyTextMap>({});   // keyId -> texto
   const [integration,setIntegration]=useState('');
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const toggleKey=id=>{
+  const toggleKey=(id: FourKeyId)=>{
     setSelKeys(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
     setKeyPriority(p=>({...p,[id]:p[id]||'primary'}));
   };
-  const setPriority=(id,v)=>setKeyPriority(p=>({...p,[id]:v}));
+  const setPriority=(id: FourKeyId,v: FourKeyPriority)=>setKeyPriority(p=>({...p,[id]:v}));
 
   const activeKeys=KEYS.filter(k=>selKeys.includes(k.id));
 
@@ -1321,10 +1336,10 @@ ${step>=2?`Emoções mapeadas: ${JSON.stringify(emotionMap)}`:''}
 Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (XEODesign 2004). Foque em como criar emoção através de gameplay, não de narrativa ou cutscenes. Responda em português brasileiro.`;
   };
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
-    const curr=[...aiMsgs[step],um];
+    const um: ChatMessage={role:'user',content:txt};
+    const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
@@ -1343,7 +1358,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
 
   const saveDoc=()=>{
     const pId=project.id,mId='mechanics';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'4keys'};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'4keys'};
     setPData(p=>{
       const curr=p?.[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
@@ -1425,7 +1440,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:'8px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+STEPS[step].label.toLowerCase()+'...'} style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+STEPS[step].label.toLowerCase()+'...'} style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
               <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#fff',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
             </div>
           </>)}
@@ -1461,7 +1476,6 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
                 {KEYS.map(k=>{
                   const sel=selKeys.includes(k.id);
-                  const pri=keyPriority[k.id]==='primary';
                   return(
                     <div key={k.id} style={{background:sel?k.color+'12':'var(--gdd-bg2)',border:'1px solid '+(sel?k.color+'66':'var(--gdd-border2)'),borderRadius:12,padding:'14px 16px',transition:'all .15s'}}>
                       <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
@@ -1481,7 +1495,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
                         </div>
                         {sel&&(
                           <div style={{display:'flex',gap:4,flexShrink:0}}>
-                            {['primary','secondary'].map(v=>(
+                            {(['primary','secondary'] as FourKeyPriority[]).map(v=>(
                               <button key={v} onClick={()=>setPriority(k.id,v)} style={{background:keyPriority[k.id]===v?k.color+'22':'none',border:'1px solid '+(keyPriority[k.id]===v?k.color+'66':'var(--gdd-border)'),color:keyPriority[k.id]===v?k.color:'var(--gdd-muted)',borderRadius:6,padding:'3px 9px',cursor:'pointer',fontSize:10,fontWeight:keyPriority[k.id]===v?700:400}}>
                                 {v==='primary'?'🔑 Primária':'🔸 Secundária'}
                               </button>
