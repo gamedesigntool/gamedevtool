@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Repository Migration Planning Pass
+→ Post-Production Readiness Baseline
 
 Previous completed phases:
 - Data Extraction Pass
@@ -49,6 +49,8 @@ Previous completed phases:
 - Supabase Readiness Pass
 - Supabase Foundation Pass
 - Supabase Authentication Pass
+- Repository Migration Planning Pass
+- Production Readiness Pass
 
 Completed Supabase Authentication Pass:
 - optional Supabase authentication
@@ -58,23 +60,33 @@ Completed Supabase Authentication Pass:
 - authenticated user identity for future cloud persistence
 - local-first behavior preserved
 
+Completed Production Readiness Pass:
+- safe `.env.example` with placeholder Supabase variables
+- local environment files ignored by Git
+- `typecheck` script available
+- TypeScript clean
+- ESLint clean
+- production build passing
+- minimum auth UX with login, signup, password reset, logout, and signed-in user email display
+- README updated from the default Vite template to the current project state
+
 Current goals:
-- plan repository migration strategy
-- define local-first + cloud coexistence
-- decide which repository migrates first
-- define explicit local-to-cloud import UX
-- determine incremental implementation order
-- document tradeoffs and risks
+- preserve the local-first production-ready baseline
+- keep README and agent guidance aligned with real runtime behavior
+- use the repository migration documents as planning references before future implementation
+- keep validation commands passing before handoff
 
 Current non-goals:
 - real cloud persistence
 - automatic sync
 - local/cloud merge
 - repository implementation changes
+- repository migration implementation
 - realtime collaboration
 - autosave
 - global state
 - broad hooks extraction
+- Edge Functions or AI proxy implementation
 - large rewrites
 
 ---
@@ -93,6 +105,8 @@ The following documents are the current source of truth:
 - docs/architecture/supabase-schema-v1.sql
 
 These documents must be consulted before proposing architectural changes.
+
+Repository migration documents remain canonical planning references. They do not mean runtime cloud persistence or repository migration has started.
 
 ---
 
@@ -113,30 +127,40 @@ Already extracted:
 - authSessionService
 - AuthControls
 
+Production readiness already completed:
+- safe Supabase environment example
+- environment ignore policy
+- `typecheck` script
+- TypeScript cleanup
+- ESLint cleanup
+- README cleanup
+
 Supabase foundations already implemented:
 - environment configuration
 - nullable Supabase client
 - migrations infrastructure
 - runtime bootstrap integration
-- optional authentication service and UI
+- optional authentication service and minimum UI
+- login, signup, password reset, logout, and signed-in user email display
 
 Persistence currently remains localStorage-backed.
 Supabase is not active runtime persistence yet.
+Signing in does not enable cloud sync, cloud persistence, import, merge, protected routes, or account pages.
 
 ---
 
 ## Current Priority
 
-The current architectural priority is:
+The current priority is:
 
-→ Define the safest repository migration path from localStorage to Supabase.
+→ Preserve the production-ready local-first baseline while keeping future repository migration explicit and incremental.
 
 The current repository migration strategy is documented in:
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/persistence-context.md
 - docs/architecture/local-to-cloud-import-service.md
 
-Key questions:
+Repository migration has not started in runtime code. Before future implementation, re-check:
 - Which repository should migrate first?
 - How should authenticated identity be threaded into persistence?
 - How should local and cloud coexist?
@@ -147,19 +171,22 @@ Key questions:
 
 ## Repository Migration Focus
 
-Primary areas:
+Repository migration remains future work.
+
+Planning areas:
 - projectRepository migration planning
 - local-first + cloud coexistence
 - explicit import UX
 - ownership-aware persistence
 - implementation sequencing
 
-Current planning decision:
+Current planning decisions:
 - projectRepository is the first planned migration target
 - projectDataRepository must not be migrated first
 - local-first behavior remains preserved
 - explicit local-to-cloud import is required
 - no runtime cloud persistence exists yet
+- no repository has been migrated to Supabase yet
 - PersistenceContext is documented in docs/architecture/persistence-context.md
 - LocalToCloudImportService is documented in docs/architecture/local-to-cloud-import-service.md
 
@@ -167,13 +194,14 @@ Future directions:
 - cloud persistence
 - projectData split migration
 - secure AI proxying
+- Edge Functions
 - collaboration-ready foundations
 
 ---
 
 ## Planning Philosophy
 
-This phase is planning-focused and architecture-heavy.
+Future repository migration should remain planning-focused before implementation.
 
 Preferred approach:
 1. analyze current repositories
@@ -212,19 +240,24 @@ Completed:
 2. nullable Supabase client
 3. migrations setup
 4. project bootstrap integration
-5. authentication
+5. authentication foundation
+6. minimum auth UX
+7. production readiness cleanup
 
 Current:
-6. repository migration planning
+8. localStorage remains the active runtime persistence
+9. repository migration implementation has not started
 
 Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
 
 Future:
-7. projectRepository migration
-8. projectData migration
-9. cloud sync
-10. optional realtime
+10. explicit local-to-cloud import UX
+11. projectRepository migration
+12. projectData migration
+13. cloud sync
+14. Edge Functions / secure AI proxy
+15. optional realtime
 
 ---
 
@@ -296,7 +329,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/repository-migration-planning
+- feature/project-repository-cloud-migration
 
 ---
 
@@ -309,14 +342,16 @@ Current:
 - localStorage
 - Cloudflare Pages
 
-Supabase foundations:
+Implemented Supabase foundations:
 - Supabase
-- Postgres
 - Auth
-- Storage
-- Edge Functions
+- nullable client boundary
+- optional environment configuration
 
 Planned later:
+- Postgres-backed persistence
+- Supabase Storage
+- Edge Functions
 - Realtime
 - React Router
 - TanStack Query
@@ -352,7 +387,9 @@ When implementing:
 - Do not propose full rewrites
 - Do not replace all repositories at once
 - Do not migrate all data at once
-- Do not implement cloud persistence during this planning phase
+- Do not implement cloud persistence during the current baseline phase
+- Do not imply signing in enables sync or cloud persistence
+- Do not implement Edge Functions or AI proxying yet
 - Do not introduce global state
 - Do not extract hooks prematurely
 - Do not overengineer abstractions
