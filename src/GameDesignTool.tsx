@@ -5310,7 +5310,13 @@ function GDDHubInner(){
 
   useEffect(()=>{const fn=()=>setScrolled(window.scrollY>30);window.addEventListener('scroll',fn);return()=>window.removeEventListener('scroll',fn);},[]);
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
-  useEffect(()=>{if(!project&&GUIDED_VIEWS.includes(view))setView('dashboard');},[project,view]);
+  useEffect(()=>{
+    if(!project&&GUIDED_VIEWS.includes(view)){
+      // Intentional navigation guard when the selected project is cleared.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setView('dashboard');
+    }
+  },[project,view]);
   useEffect(()=>{
     let isMounted=true;
     getCurrentAuthSession().then(snapshot=>{
