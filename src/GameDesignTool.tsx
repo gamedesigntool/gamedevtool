@@ -2735,9 +2735,46 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
 }
 
 // ── ElementalTetradGuide ──────────────────────────────────────────────────────
-function ElementalTetradGuide({project,pData,setPData,onBack,onDocCreated}){
+type TetradGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type TetradElementId = "aesthetics" | "mechanics" | "story" | "technology";
+type TetradSubfieldKey =
+  | "visual"
+  | "audio"
+  | "feel"
+  | "style"
+  | "space"
+  | "objects"
+  | "actions"
+  | "rules"
+  | "world"
+  | "characters"
+  | "conflict"
+  | "emergence"
+  | "platform"
+  | "foundational"
+  | "constraints"
+  | "delivery";
+type TetradSubfield = { key: TetradSubfieldKey; label: string; placeholder: string };
+type TetradElement = Omit<(typeof TETRAD_ELEMENTS)[number], "id" | "diamond" | "visibility" | "subfields"> & {
+  id: TetradElementId;
+  diamond: "top" | "left" | "right" | "bottom";
+  visibility: "player" | "partial" | "hidden";
+  subfields: TetradSubfield[];
+};
+type TetradElementData = Partial<Record<TetradSubfieldKey, string>>;
+type TetradElementDataById = Record<TetradElementId, TetradElementData>;
+
+function ElementalTetradGuide({project,setPData,onBack,onDocCreated}: TetradGuideProps){
+  if(!project)return null;
+
   const CLR=TETRAD_CLR;
-  const ELEMENTS=TETRAD_ELEMENTS;
+  const ELEMENTS=TETRAD_ELEMENTS as TetradElement[];
   const STEPS=TETRAD_STEPS;
   const GUIDE=TETRAD_GUIDE;
 
@@ -2752,19 +2789,19 @@ function ElementalTetradGuide({project,pData,setPData,onBack,onDocCreated}){
   const [theme,setTheme]=useState(''); // the unifying theme
   const [harmonyNotes,setHarmonyNotes]=useState('');
   // Per-element, per-subfield data
-  const [elemData,setElemData]=useState(()=>
-    Object.fromEntries(ELEMENTS.map(e=>[e.id,Object.fromEntries(e.subfields.map(sf=>[sf.key,'']))]))
+  const [elemData,setElemData]=useState<TetradElementDataById>(()=>
+    Object.fromEntries(ELEMENTS.map(e=>[e.id,Object.fromEntries(e.subfields.map(sf=>[sf.key,''])) as TetradElementData])) as TetradElementDataById
   );
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const setField=(eId,sfKey,val)=>setElemData(d=>({...d,[eId]:{...d[eId],[sfKey]:val}}));
-  const elemFilled=id=>Object.values(elemData[id]).some(v=>v.trim().length>0);
-  const allFilled=ids=>ids.every(id=>elemFilled(id));
+  const isFilledText=(v: string | undefined): v is string=>typeof v==="string"&&v.trim().length>0;
+  const setField=(eId: TetradElementId,sfKey: TetradSubfieldKey,val: string)=>setElemData(d=>({...d,[eId]:{...d[eId],[sfKey]:val}}));
+  const elemFilled=(id: TetradElementId)=>Object.values(elemData[id]).some(isFilledText);
 
   // Harmony: count filled elements and connections
   const filledEls=ELEMENTS.filter(e=>elemFilled(e.id));
@@ -2777,10 +2814,10 @@ Tema central: "${theme||'Não definido ainda'}"
 Elementos preenchidos: ${filledEls.map(e=>e.label).join(', ')||'Nenhum ainda'}
 Foque na HARMONIA entre os 4 elementos e em como cada um reforça o tema central. Use exemplos concretos de jogos conhecidos. Responda em português brasileiro.`;
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
-    const curr=[...aiMsgs[step],um];
+    const um: ChatMessage={role:'user',content:txt};
+    const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
@@ -2791,7 +2828,10 @@ Foque na HARMONIA entre os 4 elementos e em como cada um reforça o tema central
 
   const compileHtml=()=>{
     const elBlocks=ELEMENTS.map(e=>{
-      const rows=e.subfields.map(sf=>elemData[e.id][sf.key]?`<h4>${sf.label}</h4><p>${elemData[e.id][sf.key]}</p>`:'').join('');
+      const rows=e.subfields.map(sf=>{
+        const value=elemData[e.id][sf.key]||'';
+        return value?`<h4>${sf.label}</h4><p>${value}</p>`:'';
+      }).join('');
       return rows?`<h3>${e.icon} ${e.label}</h3>${rows}`:'';
     }).filter(Boolean).join('');
     return `<h2>◈ Elemental Tetrad — ${docTitle}</h2>
@@ -2805,7 +2845,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
 
   const saveDoc=()=>{
     const pId=project.id,mId='mechanics';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'tetrad'};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'tetrad'};
     setPData(p=>{
       const curr=p?.[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
@@ -2829,15 +2869,12 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
       mechanics: {x:18,     y:cy},
       story:     {x:202,    y:cy},
       technology:{x:cx,     y:202},
-    };
+    } satisfies Record<TetradElementId,{x: number; y: number}>;
     // 6 connections
-    const conns=[
+    const conns: [TetradElementId,TetradElementId][]=[
       ['aesthetics','mechanics'],['aesthetics','story'],['aesthetics','technology'],
       ['mechanics','story'],['mechanics','technology'],['story','technology'],
     ];
-    // Layer of visibility (distance from player)
-    const visLabel={player:'👁 Visível ao jogador',partial:'◑ Parcialmente visível',hidden:'👁‍🗨 Invisível ao jogador'};
-    const elMap=Object.fromEntries(ELEMENTS.map(e=>[e.id,e]));
 
     return(
       <svg viewBox="0 0 220 220" style={{width:200,height:200,flexShrink:0}}>
@@ -2886,7 +2923,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
   };
 
 
-  const ElementCard=({e})=>(
+  const ElementCard=({e}: {e: TetradElement})=>(
     <div style={{background:'var(--gdd-bg2)',border:'1px solid '+(elemFilled(e.id)?e.color+'55':'var(--gdd-border2)'),borderRadius:12,padding:'16px 18px',transition:'border-color .2s'}}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
         <span style={{fontSize:18}}>{e.icon}</span>
@@ -2901,7 +2938,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
       {e.subfields.map(sf=>(
         <div key={sf.key} style={{marginBottom:12}}>
           <div style={{fontSize:10,color:e.color,fontWeight:700,letterSpacing:1,marginBottom:5,textTransform:'uppercase'}}>{sf.label}</div>
-          <TA value={elemData[e.id][sf.key]} onChange={v=>setField(e.id,sf.key,v)} placeholder={sf.placeholder} rows={2}/>
+          <TA value={elemData[e.id][sf.key]||''} onChange={v=>setField(e.id,sf.key,v)} placeholder={sf.placeholder} rows={2}/>
         </div>
       ))}
     </div>
@@ -2992,7 +3029,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:'7px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre o Elemental Tetrad..." style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre o Elemental Tetrad..." style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
               <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
             </div>
           </>)}
@@ -3001,17 +3038,20 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
             <div style={{flex:1,overflowY:'auto',padding:'14px 16px'}}>
               <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,marginBottom:10,textTransform:'uppercase'}}>📄 Resumo</div>
               {theme&&<div style={{marginBottom:12,background:CLR+'08',border:'1px solid '+CLR+'20',borderRadius:8,padding:'8px 12px',fontSize:11,color:CLR,fontStyle:'italic'}}>🎯 "{theme}"</div>}
-              {ELEMENTS.map(e=>(
-                <div key={e.id} style={{marginBottom:10,opacity:elemFilled(e.id)?1:0.3}}>
-                  <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:3}}>
-                    <span style={{fontSize:9,color:elemFilled(e.id)?'#34d399':'#334155',fontWeight:900}}>{elemFilled(e.id)?'✓':'○'}</span>
-                    <span style={{fontSize:11,color:elemFilled(e.id)?e.color:'#334155',fontWeight:700}}>{e.icon} {e.label}</span>
+              {ELEMENTS.map(e=>{
+                const firstFilled=Object.values(elemData[e.id]).find(isFilledText)||'';
+                return(
+                  <div key={e.id} style={{marginBottom:10,opacity:elemFilled(e.id)?1:0.3}}>
+                    <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:3}}>
+                      <span style={{fontSize:9,color:elemFilled(e.id)?'#34d399':'#334155',fontWeight:900}}>{elemFilled(e.id)?'✓':'○'}</span>
+                      <span style={{fontSize:11,color:elemFilled(e.id)?e.color:'#334155',fontWeight:700}}>{e.icon} {e.label}</span>
+                    </div>
+                    {elemFilled(e.id)&&<div style={{fontSize:10,color:'var(--gdd-muted)',lineHeight:1.5,paddingLeft:14,borderLeft:'2px solid '+e.color+'33'}}>
+                      {firstFilled.slice(0,80)}{firstFilled.length>80?'…':''}
+                    </div>}
                   </div>
-                  {elemFilled(e.id)&&<div style={{fontSize:10,color:'var(--gdd-muted)',lineHeight:1.5,paddingLeft:14,borderLeft:'2px solid '+e.color+'33'}}>
-                    {Object.values(elemData[e.id]).find(v=>v.trim())?.slice(0,80)||''}{(Object.values(elemData[e.id]).find(v=>v.trim())||'').length>80?'…':''}
-                  </div>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -3025,8 +3065,8 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
               <strong style={{color:CLR}}>Insight de Schell: </strong>
               Technology fica na base do diamante pois define o que é possível. O designer começa entendendo os limites e oportunidades da plataforma — restrições criativas muitas vezes geram as soluções mais elegantes.
             </div>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='technology')}/>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='mechanics')}/>
+            <ElementCard e={ELEMENTS.find(e=>e.id==='technology')!}/>
+            <ElementCard e={ELEMENTS.find(e=>e.id==='mechanics')!}/>
           </>)}
 
           {/* STEP 1 — Story + Aesthetics */}
@@ -3035,8 +3075,8 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
               <strong style={{color:CLR}}>Insight de Schell: </strong>
               Aesthetics fica no topo porque é o que o jogador encontra primeiro. Story e Mechanics têm a relação mais complexa do Tetrad — mecânicas criam liberdade, narrativas lineares exigem controle. O melhor design resolve essa tensão com mecânicas narrativas.
             </div>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='story')}/>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='aesthetics')}/>
+            <ElementCard e={ELEMENTS.find(e=>e.id==='story')!}/>
+            <ElementCard e={ELEMENTS.find(e=>e.id==='aesthetics')!}/>
           </>)}
 
           {/* STEP 2 — Harmony */}
