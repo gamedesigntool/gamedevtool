@@ -1006,7 +1006,19 @@ ${charImgUpload?`<hr><h2>🖼️ Imagem do Personagem</h2><figure style="margin:
 }
 
 // ── MDAGuide ──────────────────────────────────────────────────────────────────
-function MDAGuide({project,pData,setPData,onBack,onDocCreated}){
+type MDAGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type MdaAesthetic = (typeof MDA_AESTHETICS)[number];
+const isMdaAesthetic = (value: MdaAesthetic | undefined): value is MdaAesthetic => Boolean(value);
+
+function MDAGuide({project,setPData,onBack,onDocCreated}: MDAGuideProps){
+  if(!project)return null;
+
   const AI_HINTS=[
     ['Quais estéticas jogos do mesmo gênero costumam usar?','Como combinar Challenge com Fellowship de forma eficaz?','Que emoção um jogo de '+project.genre+' deve priorizar?'],
     ['Como criar tensão dramática nas dinâmicas deste jogo?','Que sistemas de feedback funcionam bem para '+project.genre+'?','Como as dinâmicas devem suportar a estética escolhida?'],
@@ -1015,7 +1027,7 @@ function MDAGuide({project,pData,setPData,onBack,onDocCreated}){
 
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Nova Mecânica MDA');
-  const [selAes,setSelAes]=useState([]);
+  const [selAes,setSelAes]=useState<string[]>([]);
   const [aesDesc,setAesDesc]=useState('');
   const [aesModel,setAesModel]=useState('');
   const [dynDesc,setDynDesc]=useState('');
@@ -1023,13 +1035,13 @@ function MDAGuide({project,pData,setPData,onBack,onDocCreated}){
   const [mecRules,setMecRules]=useState('');
   const [mecTuning,setMecTuning]=useState('');
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const toggleAes=id=>setSelAes(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const toggleAes=(id: string)=>setSelAes(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
 
   const getCtx=()=>{
     const aesLabels=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean).join(', ');
@@ -1044,9 +1056,9 @@ ${step>=2?`Dinâmicas: ${dynDesc}\nSistemas de feedback: ${dynFeed}`:''}
 Guie o usuário de forma concisa e prática, sempre referenciando o framework MDA. Responda em português brasileiro.`;
   };
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
+    const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
@@ -1057,16 +1069,15 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
   };
 
   const compileHtml=()=>{
-    const aesLabels=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean);
-    const aesIcons=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)).filter(Boolean).map(a=>a.icon+' '+a.label).join(' · ');
+    const aesIcons=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)).filter(isMdaAesthetic).map(a=>a.icon+' '+a.label).join(' · ');
     return `<h2>📐 MDA Framework — ${docTitle}</h2><p><em>Documento estruturado com o framework MDA (Hunicke, LeBlanc, Zubek)</em></p><hr><h2>🎭 Estética</h2><p><strong>Tipos de diversão selecionados:</strong> ${aesIcons||'—'}</p>${aesDesc?`<h3>Experiência do Jogador</h3><p>${aesDesc}</p>`:''} ${aesModel?`<h3>Modelo Estético</h3><p>${aesModel}</p>`:''}<hr><h2>⚡ Dinâmica</h2>${dynDesc?`<h3>Comportamentos Emergentes</h3><p>${dynDesc}</p>`:''} ${dynFeed?`<h3>Sistemas de Feedback</h3><p>${dynFeed}</p>`:''}<hr><h2>⚙️ Mecânica</h2>${mecRules?`<h3>Regras e Ações</h3><p>${mecRules}</p>`:''} ${mecTuning?`<h3>Tuning e Balanceamento</h3><p>${mecTuning}</p>`:''}`;
   };
 
   const saveDoc=()=>{
     const pId=project.id,mId='mechanics';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'mda'};
-    setPData(p=>{
-      const curr=p?.[pId]?.[mId]||{docs:[]};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'mda'};
+    setPData((p: ProjectData)=>{
+      const curr=p[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
     });
     onDocCreated(doc);
@@ -1147,7 +1158,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
                 <div ref={chatEndRef}/>
               </div>
               <div style={{padding:'8px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-                <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+MDA_STEPS[step].label.toLowerCase()+'...'} style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+                <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+MDA_STEPS[step].label.toLowerCase()+'...'} style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
                 <button style={S.btn(aiLoad?'var(--gdd-border)':MDA_CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
               </div>
             </>
@@ -1156,7 +1167,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
             <div style={{flex:1,overflowY:'auto',padding:'22px 20px'}}>
               <div style={{fontSize:10,fontWeight:700,color:MDA_CLR,letterSpacing:1.5,marginBottom:14,textTransform:'uppercase'}}>📄 Resumo do documento</div>
               {[
-                {label:'Estéticas',value:selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)).filter(Boolean).map(a=>a.icon+' '+a.label).join(', ')||'—'},
+                {label:'Estéticas',value:selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)).filter(isMdaAesthetic).map(a=>a.icon+' '+a.label).join(', ')||'—'},
                 {label:'Experiência do jogador',value:aesDesc||'—'},
                 {label:'Modelo estético',value:aesModel||'—'},
                 {label:'Dinâmicas',value:dynDesc||'—'},
