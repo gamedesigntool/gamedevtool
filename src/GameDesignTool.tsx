@@ -4302,7 +4302,15 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
 }
 
 // ── UnityLDGuide ──────────────────────────────────────────────────────────────
-function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
+type UnityLDGuideProps = {
+  project: Project;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+
+function UnityLDGuide({project,setPData,onBack,onDocCreated}: UnityLDGuideProps){
   const CLR=UNITY_LD_CLR;
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Level Design — '+project.name);
@@ -4365,12 +4373,13 @@ function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
   ];
 
   const TIPS=UNITY_LD_TIPS;
+  const unityInputStyle=S.inp as CSSProperties;
 
   const compile=()=>{
     let html='';
-    const h2=t=>`<h2>${t}</h2>`;
-    const h3=t=>`<h3>${t}</h3>`;
-    const p=t=>t?`<p>${t}</p>`:'';
+    const h2=(t: string)=>`<h2>${t}</h2>`;
+    const h3=(t: string)=>`<h3>${t}</h3>`;
+    const p=(t: string)=>t?`<p>${t}</p>`:'';
     html+=`<p><em>Criado com o Guia de Level Design (Unity Introduction to Level Design)</em></p><hr>`;
 
     if(levelName||genre||coherentDesign||references||audience){
@@ -4423,9 +4432,9 @@ function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
       if(spawnSave){html+=h3('Spawn, Save Points e Checkpoints');html+=p(spawnSave);}
     }
 
-    const doc={id:uid(),title:docTitle,content:html,framework:'unity-ld',status:'progress',createdAt:todayStr(),updatedAt:todayStr()};
+    const doc: Document={id:uid(),title:docTitle,content:html,framework:'unity-ld',status:'progress',createdAt:todayStr(),updatedAt:todayStr()};
     const pId=project.id,mId='leveldesign';
-    setPData(prev=>{const curr=prev?.[pId]?.[mId]||{docs:[]};return{...prev,[pId]:{...(prev?.[pId]||{}),[mId]:{...curr,docs:[...curr.docs,doc]}}};});
+    setPData(prev=>{const curr=prev?.[pId]?.[mId]||{docs:[]};return{...prev,[pId]:{...(prev?.[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};});
     onDocCreated(doc);
   };
 
@@ -4532,7 +4541,7 @@ function UnityLDGuide({project,pData,setPData,onBack,onDocCreated}){
                 <div style={{fontSize:10,color:CLR,fontWeight:700,letterSpacing:1,marginBottom:12,textTransform:'uppercase'}}>Nome do documento</div>
                 {editingTitle
                   ?<input value={docTitle} onChange={e=>setDocTitle(e.target.value)} onBlur={()=>setEditingTitle(false)} onKeyDown={e=>{if(e.key==='Enter')setEditingTitle(false);}} autoFocus
-                      style={{...S.inp,padding:'10px 14px',fontSize:14}}/>
+                      style={{...unityInputStyle,padding:'10px 14px',fontSize:14}}/>
                   :<div style={{background:'var(--gdd-bg)',border:'1px solid '+'var(--gdd-border)',borderRadius:8,padding:'10px 14px',color:'var(--gdd-text)',fontSize:14,cursor:'text',textAlign:'left'}} onClick={()=>setEditingTitle(true)}>{docTitle}</div>
                 }
               </div>
@@ -5390,6 +5399,7 @@ function GDDHubInner(){
   );
 
   if(view==='unity-ld-guided')return(
+    !project?null:
     <UnityLDGuide project={project} pData={pData} setPData={setPData}
       onBack={()=>{setView('module');setModule(getModuleById('leveldesign'));}}
       onDocCreated={(doc: Document)=>{setModule(getModuleById('leveldesign'));openDoc(doc);}}/>
