@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type ErrorInfo, type MouseEvent, type ReactNode, type SetStateAction } from "react";
+import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type ErrorInfo, type MouseEvent, type ReactNode, type SetStateAction, type WheelEvent } from "react";
 import { AuthControls } from "./components/auth/AuthControls";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
@@ -67,6 +67,8 @@ type FlowConnecting = { fromId: string; fromPort: string; ax: number; ay: number
 type FlowPanning = { sx: number; sy: number; sp: CanvasPoint } | null;
 
 type CanvasPoint = { x: number; y: number };
+type CanvasElementType = "sticky" | "text" | "rect" | "circle" | "image";
+type CanvasTool = "select" | "pen" | CanvasElementType;
 type CanvasStroke = { id: string; points: CanvasPoint[]; color: string; width: number };
 type CanvasElement = {
   id: string;
@@ -204,9 +206,9 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
   const CLR='#fb923c';
   const SWATCHES=['#fef08a','#bbf7d0','#bfdbfe','#fecaca','#e9d5ff','#fed7aa'];
   const PEN_CLRS=['#f1f5f9','#f87171','#60a5fa','#34d399','#fbbf24','#a855f7'];
-  const TOOLS=[{id:'select',label:'🖱️',title:'Selecionar'},{id:'sticky',label:'📌',title:'Post-it'},{id:'text',label:'T',title:'Texto'},{id:'pen',label:'✏️',title:'Caneta'},{id:'rect',label:'▭',title:'Retângulo'},{id:'circle',label:'◯',title:'Círculo'},{id:'image',label:'🖼️',title:'Imagem'}];
+  const TOOLS: {id: CanvasTool; label: string; title: string}[]=[{id:'select',label:'🖱️',title:'Selecionar'},{id:'sticky',label:'📌',title:'Post-it'},{id:'text',label:'T',title:'Texto'},{id:'pen',label:'✏️',title:'Caneta'},{id:'rect',label:'▭',title:'Retângulo'},{id:'circle',label:'◯',title:'Círculo'},{id:'image',label:'🖼️',title:'Imagem'}];
 
-  const [tool,setTool]=useState('select');
+  const [tool,setTool]=useState<CanvasTool>('select');
   const [elements,setElements]=useState<CanvasElement[]>(()=>pData?.[project.id]?.canvas?.elements||[]);
   const [strokes,setStrokes]=useState<CanvasStroke[]>(()=>pData?.[project.id]?.canvas?.strokes||[]);
   const [selId,setSelId]=useState<string | null>(null);
@@ -252,42 +254,43 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
   useEffect(()=>{redrawStrokes();},[strokes]);
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[msgs,chatLoad]);
 
-  const bp=e=>{const r=boardRef.current?.getBoundingClientRect();if(!r)return{x:0,y:0};return{x:(e.clientX-r.left)/zoomRef.current,y:(e.clientY-r.top)/zoomRef.current};};
+  const bp=(e: MouseEvent<Element>): CanvasPoint=>{const r=boardRef.current?.getBoundingClientRect();if(!r)return{x:0,y:0};return{x:(e.clientX-r.left)/zoomRef.current,y:(e.clientY-r.top)/zoomRef.current};};
 
-  const addEl=(type,x,y,src='')=>{
-    const map={sticky:[160,160],text:[180,60],rect:[160,100],circle:[120,120],image:[200,150]};
+  const addEl=(type: CanvasElementType,x: number,y: number,src='')=>{
+    const map: Record<CanvasElementType, [number, number]>={sticky:[160,160],text:[180,60],rect:[160,100],circle:[120,120],image:[200,150]};
     const [w,h]=map[type]||[160,100];
-    const bgMap={sticky:elClr,text:'transparent',rect:elClr,circle:elClr,image:'transparent'};
-    const el={id:uid(),type,x:x-w/2,y:y-h/2,w,h,text:type==='sticky'?'Nota..':type==='text'?'Texto..':'',color:bgMap[type],textColor:type==='text'?'var(--gdd-text)':'#1a1a2e',src,fontSize:type==='text'?15:13};
+    const bgMap: Record<CanvasElementType, string>={sticky:elClr,text:'transparent',rect:elClr,circle:elClr,image:'transparent'};
+    const el: CanvasElement={id:uid(),type,x:x-w/2,y:y-h/2,w,h,text:type==='sticky'?'Nota..':type==='text'?'Texto..':'',color:bgMap[type],textColor:type==='text'?'var(--gdd-text)':'#1a1a2e',src,fontSize:type==='text'?15:13};
     setElements(p=>[...p,el]);setSelId(el.id);setTool('select');
   };
-  const updEl=(id,patch)=>setElements(p=>p.map(e=>e.id===id?{...e,...patch}:e));
+  const updEl=(id: string,patch: Partial<CanvasElement>)=>setElements(p=>p.map(e=>e.id===id?{...e,...patch}:e));
   const delSel=()=>{if(selId){setElements(p=>p.filter(e=>e.id!==selId));setSelId(null);}};
   const undoStroke=()=>setStrokes(p=>p.slice(0,-1));
   const clearAll=()=>{setElements([]);setStrokes([]);setSelId(null);setEditId(null);const cv=cvRef.current;if(cv){const ctx=cv.getContext('2d');ctx?.clearRect(0,0,cv.width,cv.height);}};
-  const changeZoom=delta=>setZoom(z=>parseFloat(Math.min(3,Math.max(0.25,z+delta)).toFixed(2)));
+  const changeZoom=(delta: number)=>setZoom(z=>parseFloat(Math.min(3,Math.max(0.25,z+delta)).toFixed(2)));
   const resetZoom=()=>setZoom(1);
-  const onWheel=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();changeZoom(e.deltaY<0?0.1:-0.1);}};
+  const onWheel=(e: WheelEvent<HTMLDivElement>)=>{if(e.ctrlKey||e.metaKey){e.preventDefault();changeZoom(e.deltaY<0?0.1:-0.1);}};
 
-  const onBoardDown=e=>{
+  const onBoardDown=(e: MouseEvent<HTMLDivElement>)=>{
     if(e.target!==boardRef.current&&e.target!==cvRef.current&&e.target!==innerBoardRef.current)return;
-    if(toolRef.current==='pen')return;
-    if(toolRef.current==='image'){pendPos.current=bp(e);fileRef.current?.click();return;}
-    if(toolRef.current==='select'){setSelId(null);setEditId(null);return;}
-    addEl(toolRef.current,bp(e).x,bp(e).y);
+    const activeTool=toolRef.current;
+    if(activeTool==='pen')return;
+    if(activeTool==='image'){pendPos.current=bp(e);fileRef.current?.click();return;}
+    if(activeTool==='select'){setSelId(null);setEditId(null);return;}
+    addEl(activeTool,bp(e).x,bp(e).y);
   };
-  const onBoardMove=e=>{
+  const onBoardMove=(e: MouseEvent<HTMLDivElement>)=>{
     if(!dragRef.current)return;
     const pos=bp(e);const{id,ox,oy,sx,sy}=dragRef.current;
     setElements(p=>p.map(el=>el.id===id?{...el,x:ox+pos.x-sx,y:oy+pos.y-sy}:el));
   };
   const onBoardUp=()=>{dragRef.current=null;};
 
-  const onCvDown=e=>{
+  const onCvDown=(e: MouseEvent<HTMLCanvasElement>)=>{
     if(toolRef.current!=='pen')return;
     drawActive.current=true;drawPts.current=[bp(e)];
   };
-  const onCvMove=e=>{
+  const onCvMove=(e: MouseEvent<HTMLCanvasElement>)=>{
     if(!drawActive.current)return;
     const pos=bp(e);drawPts.current=[...drawPts.current,pos];
     const cv=cvRef.current;if(!cv)return;
@@ -301,13 +304,13 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
     if(drawPts.current.length>1)setStrokes(p=>[...p,{id:uid(),points:drawPts.current,color:penClrRef.current,width:penSzRef.current}]);
     drawPts.current=[];
   };
-  const onElDown=(e,id)=>{
+  const onElDown=(e: MouseEvent<HTMLDivElement>,id: string)=>{
     e.stopPropagation();if(toolRef.current!=='select')return;
     setSelId(id);setEditId(null);
     const pos=bp(e);const el=elements.find(el=>el.id===id);if(!el)return;
     dragRef.current={id,ox:el.x,oy:el.y,sx:pos.x,sy:pos.y};
   };
-  const onElDbl=(e,id)=>{
+  const onElDbl=(e: MouseEvent<HTMLDivElement>,id: string)=>{
     e.stopPropagation();const el=elements.find(e=>e.id===id);
     if(el?.type==='sticky'||el?.type==='text')setEditId(id);
   };
