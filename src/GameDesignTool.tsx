@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type ErrorInfo, type MouseEvent, type ReactNode, type SetStateAction, type WheelEvent } from "react";
+import { useState, useRef, useEffect, useCallback, Component, type CSSProperties, type ChangeEvent, type Dispatch, type DragEvent, type ErrorInfo, type MouseEvent, type ReactNode, type SetStateAction, type WheelEvent } from "react";
 import { AuthControls } from "./components/auth/AuthControls";
 import { LangToggle, LdField, TA, ThemeToggle, WbField } from "./components/shared/GameDesignToolControls";
 import { EMOJIS, MODULES, MODULES_I18N, PALETTE, THEMES, TR } from "./config/gameDesignToolConfig";
@@ -82,6 +82,32 @@ type CanvasElement = {
   textColor?: string;
   src?: string;
   fontSize?: number;
+};
+type KanbanColumnId = "backlog" | "todo" | "doing" | "review" | "done";
+type KanbanPriority = keyof typeof TASK_PRIO;
+type KanbanTask = {
+  id: string;
+  title: string;
+  desc: string;
+  priority: string;
+  category: string;
+  column: string;
+  createdAt: string;
+  updatedAt?: string | null;
+};
+type KanbanTaskForm = {
+  title: string;
+  desc: string;
+  priority: string;
+  category: string;
+};
+type KanbanColumn = {id: KanbanColumnId; label: string; icon: string; color: string};
+type KanbanTaskUpdater = KanbanTask[] | ((tasks: KanbanTask[]) => KanbanTask[]);
+type KanbanProps = {
+  project: Project;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
 };
 
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
@@ -4714,23 +4740,27 @@ function UnityLDGuide({project,setPData,onBack,onDocCreated}: UnityLDGuideProps)
 }
 
 // ── KanbanBoard ───────────────────────────────────────────────────────────────
-function KanbanBoard({project,pData,setPData,onBack}){
-  const getTasks=()=>pData?.[project.id]?.production?.tasks||[];
-  const setTasks=updater=>{
+function KanbanBoard({project,pData,setPData,onBack}: KanbanProps){
+  const KANBAN_COLUMNS=KANBAN_COLS as KanbanColumn[];
+  const KANBAN_PRIORITY_ENTRIES=Object.entries(TASK_PRIO) as [KanbanPriority, (typeof TASK_PRIO)[KanbanPriority]][];
+  const getPriority=(priority: string)=>(priority in TASK_PRIO?TASK_PRIO[priority as KanbanPriority]:TASK_PRIO.medium);
+  const getTasks=(): KanbanTask[]=>pData?.[project.id]?.production?.tasks||[];
+  const setTasks=(updater: KanbanTaskUpdater)=>{
     setPData(prev=>{
       const curr=prev?.[project.id]?.production||{tasks:[]};
-      const newTasks=typeof updater==='function'?updater(curr.tasks):updater;
+      const currentTasks=curr.tasks||[];
+      const newTasks=typeof updater==='function'?updater(currentTasks):updater;
       return{...prev,[project.id]:{...(prev?.[project.id]||{}),production:{...curr,tasks:newTasks}}};
     });
   };
 
-  const [dragId,setDragId]=useState(null);
-  const [dragOver,setDragOver]=useState(null);
+  const [dragId,setDragId]=useState<string | null>(null);
+  const [dragOver,setDragOver]=useState<KanbanColumnId | null>(null);
   const [showModal,setShowModal]=useState(false);
   const [addCol,setAddCol]=useState('todo');
-  const [editTask,setEditTask]=useState(null);
-  const [form,setForm]=useState({title:'',desc:'',priority:'medium',category:'Design'});
-  const [delConfirm,setDelConfirm]=useState(null);
+  const [editTask,setEditTask]=useState<KanbanTask | null>(null);
+  const [form,setForm]=useState<KanbanTaskForm>({title:'',desc:'',priority:'medium',category:'Design'});
+  const [delConfirm,setDelConfirm]=useState<string | null>(null);
   const [filterCat,setFilterCat]=useState('all');
   const [filterPrio,setFilterPrio]=useState('all');
   const [search,setSearch]=useState('');
@@ -4741,8 +4771,6 @@ function KanbanBoard({project,pData,setPData,onBack}){
   const highPrio=tasks.filter(t=>t.priority==='high'&&t.column!=='done').length;
   const pct=total>0?Math.round((done/total)*100):0;
 
-  const usedCats=[...new Set(tasks.map(t=>t.category).filter(Boolean))];
-
   const filtered=tasks.filter(t=>{
     if(filterCat!=='all'&&t.category!==filterCat)return false;
     if(filterPrio!=='all'&&t.priority!==filterPrio)return false;
@@ -4750,12 +4778,12 @@ function KanbanBoard({project,pData,setPData,onBack}){
     return true;
   });
 
-  const openAdd=(colId='todo')=>{
+  const openAdd=(colId: KanbanColumnId='todo')=>{
     setAddCol(colId);
     setForm({title:'',desc:'',priority:'medium',category:'Design'});
     setEditTask(null);setShowModal(true);
   };
-  const openEdit=task=>{
+  const openEdit=(task: KanbanTask)=>{
     setForm({title:task.title,desc:task.desc||'',priority:task.priority,category:task.category||'Design'});
     setEditTask(task);setAddCol(task.column);setShowModal(true);
   };
@@ -4768,12 +4796,12 @@ function KanbanBoard({project,pData,setPData,onBack}){
     }
     setShowModal(false);setEditTask(null);
   };
-  const moveTask=(taskId,colId)=>setTasks(prev=>prev.map(t=>t.id===taskId?{...t,column:colId,updatedAt:todayStr()}:t));
-  const deleteTask=taskId=>{setTasks(prev=>prev.filter(t=>t.id!==taskId));setDelConfirm(null);};
+  const moveTask=(taskId: string,colId: KanbanColumnId)=>setTasks(prev=>prev.map(t=>t.id===taskId?{...t,column:colId,updatedAt:todayStr()}:t));
+  const deleteTask=(taskId: string)=>{setTasks(prev=>prev.filter(t=>t.id!==taskId));setDelConfirm(null);};
 
-  const onDragStart=(e,taskId)=>{setDragId(taskId);e.dataTransfer.effectAllowed='move';};
-  const onDragOver=(e,colId)=>{e.preventDefault();e.dataTransfer.dropEffect='move';setDragOver(colId);};
-  const onDrop=(e,colId)=>{e.preventDefault();if(dragId)moveTask(dragId,colId);setDragId(null);setDragOver(null);};
+  const onDragStart=(e: DragEvent<HTMLDivElement>,taskId: string)=>{setDragId(taskId);e.dataTransfer.effectAllowed='move';};
+  const onDragOver=(e: DragEvent<HTMLDivElement>,colId: KanbanColumnId)=>{e.preventDefault();e.dataTransfer.dropEffect='move';setDragOver(colId);};
+  const onDrop=(e: DragEvent<HTMLDivElement>,colId: KanbanColumnId)=>{e.preventDefault();if(dragId)moveTask(dragId,colId);setDragId(null);setDragOver(null);};
   const onDragEnd=()=>{setDragId(null);setDragOver(null);};
 
   const hasFilters=filterCat!=='all'||filterPrio!=='all'||search;
@@ -4826,7 +4854,7 @@ function KanbanBoard({project,pData,setPData,onBack}){
           <select value={filterPrio} onChange={e=>setFilterPrio(e.target.value)}
             style={{background:'var(--gdd-bg2)',border:'1px solid var(--gdd-border)',borderRadius:6,padding:'3px 8px',color:'var(--gdd-muted)',fontSize:11,outline:'none',cursor:'pointer'}}>
             <option value="all">Todas prioridades</option>
-            {Object.entries(TASK_PRIO).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+            {KANBAN_PRIORITY_ENTRIES.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
           </select>
           {hasFilters&&<button onClick={()=>{setFilterCat('all');setFilterPrio('all');setSearch('');}} style={{background:'none',border:'1px solid var(--gdd-border)',color:'var(--gdd-muted)',borderRadius:6,padding:'3px 8px',cursor:'pointer',fontSize:11}}>✕ Limpar</button>}
         </div>
@@ -4834,7 +4862,7 @@ function KanbanBoard({project,pData,setPData,onBack}){
 
       {/* ── Board ── */}
       <div style={{flex:1,overflowX:'auto',overflowY:'hidden',display:'flex',padding:'18px 18px 18px',gap:12,position:'relative'}}>
-        {KANBAN_COLS.map(col=>{
+        {KANBAN_COLUMNS.map(col=>{
           const colTasks=filtered.filter(t=>t.column===col.id);
           const allColTasks=tasks.filter(t=>t.column===col.id);
           const isOver=dragOver===col.id;
@@ -4867,7 +4895,7 @@ function KanbanBoard({project,pData,setPData,onBack}){
                 )}
 
                 {colTasks.map(task=>{
-                  const prio=TASK_PRIO[task.priority]||TASK_PRIO.medium;
+                  const prio=getPriority(task.priority);
                   const isDragging=dragId===task.id;
                   return(
                     <div key={task.id} draggable
@@ -4980,7 +5008,7 @@ function KanbanBoard({project,pData,setPData,onBack}){
               <div style={{flex:1}}>
                 <div style={{color:'var(--gdd-muted)',fontSize:11,marginBottom:7,fontWeight:600,textTransform:'uppercase',letterSpacing:.6}}>Prioridade</div>
                 <div style={{display:'flex',gap:5}}>
-                  {Object.entries(TASK_PRIO).map(([k,v])=>(
+                  {KANBAN_PRIORITY_ENTRIES.map(([k,v])=>(
                     <button key={k} onClick={()=>setForm(f=>({...f,priority:k}))}
                       style={{flex:1,background:form.priority===k?v.bg:'none',border:'1px solid '+(form.priority===k?v.color+'88':'var(--gdd-border)'),color:form.priority===k?v.color:'var(--gdd-dim)',borderRadius:7,padding:'6px 4px',cursor:'pointer',fontSize:11,fontWeight:form.priority===k?700:400,transition:'all .12s',display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
                       <span style={{fontSize:13,lineHeight:1}}>{v.icon}</span>
@@ -5002,7 +5030,7 @@ function KanbanBoard({project,pData,setPData,onBack}){
             <div style={{marginBottom:24}}>
               <div style={{color:'var(--gdd-muted)',fontSize:11,marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:.6}}>Coluna</div>
               <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-                {KANBAN_COLS.map(c=>(
+                {KANBAN_COLUMNS.map(c=>(
                   <button key={c.id} onClick={()=>setAddCol(c.id)}
                     style={{background:addCol===c.id?c.color+'20':'none',border:'1px solid '+(addCol===c.id?c.color:'var(--gdd-border)'),color:addCol===c.id?c.color:'var(--gdd-muted)',borderRadius:7,padding:'5px 11px',cursor:'pointer',fontSize:11,fontWeight:addCol===c.id?700:400,transition:'all .12s'}}>
                     {c.icon} {c.label}
