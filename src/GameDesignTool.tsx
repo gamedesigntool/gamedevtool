@@ -3556,7 +3556,15 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
 }
 
 // ── WorldbuildingGuide ────────────────────────────────────────────────────────
-function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
+type ReedsyWorldbuildingGuideProps = {
+  project: Project;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+
+function ReedsyWorldbuildingGuide({project,setPData,onBack,onDocCreated}: ReedsyWorldbuildingGuideProps){
   const CLR=REEDSY_WB_CLR;
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Worldbuilding — '+project.name);
@@ -3607,9 +3615,9 @@ function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
 
   const compile=()=>{
     let html='';
-    const h2=t=>`<h2>${t}</h2>`;
-    const h3=t=>`<h3>${t}</h3>`;
-    const p=t=>t?`<p>${t}</p>`:'';
+    const h2=(t: string)=>`<h2>${t}</h2>`;
+    const h3=(t: string)=>`<h3>${t}</h3>`;
+    const p=(t: string)=>t?`<p>${t}</p>`:'';
     const badge=`<p><em>Criado com o Guia de Worldbuilding</em></p><hr>`;
 
     html+=badge;
@@ -3670,7 +3678,7 @@ function ReedsyWorldbuildingGuide({project,pData,setPData,onBack,onDocCreated}){
     }
 
     const pId=project.id,mId='worldbuilding';
-    const doc={id:Math.random().toString(36).slice(2,9),title:docTitle.trim()||'Worldbuilding',content:html,messages:[],status:'progress',createdAt:new Date().toLocaleDateString('pt-BR'),updatedAt:null,framework:'reedsy-wb'};
+    const doc: Document={id:Math.random().toString(36).slice(2,9),title:docTitle.trim()||'Worldbuilding',content:html,messages:[],status:'progress',createdAt:new Date().toLocaleDateString('pt-BR'),updatedAt:null,framework:'reedsy-wb'};
     setPData(p=>{
       const curr=p?.[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
@@ -5375,6 +5383,7 @@ function GDDHubInner(){
   );
 
   if(view==='reedsy-wb-guided')return(
+    !project?null:
     <ReedsyWorldbuildingGuide project={project} pData={pData} setPData={setPData}
       onBack={()=>{setView('module');setModule(getModuleById('worldbuilding'));}}
       onDocCreated={(doc: Document)=>{setModule(getModuleById('worldbuilding'));openDoc(doc);}}/>
