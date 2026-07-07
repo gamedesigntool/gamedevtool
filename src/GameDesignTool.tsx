@@ -5210,6 +5210,7 @@ function GDDHubInner(){
   const [scrolled,setScrolled]=useState(false);
   const [showNew,setShowNew]=useState(false),[showNewDoc,setShowNewDoc]=useState(false),[newDocTitle,setNewDocTitle]=useState('');
   const [form,setForm]=useState({name:'',genre:'',platform:''});
+  const projectFormFields: {key: keyof typeof form; label: string}[]=[{key:'name',label:'Nome do jogo *'},{key:'genre',label:'Gênero'},{key:'platform',label:'Plataforma'}];
   const [confirm,setConfirm]=useState<ConfirmState>(null),[showExport,setShowExport]=useState(false);
   const [mechNewMode,setMechNewMode]=useState<MechanicNewMode>(null); // null | 'choice' | 'frameworks'
   const [narrNewMode,setNarrNewMode]=useState<ModeChoice>(null); // null | 'choice'
@@ -5480,7 +5481,7 @@ function GDDHubInner(){
           })}
         </div>
       </div>
-      {showNew&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:100}}><div style={{background:th.bg2,border:'1px solid '+th.border,borderRadius:18,padding:32,width:360}}><h3 style={{margin:'0 0 22px',fontSize:18}}>Novo Projeto</h3>{[['name','Nome do jogo *'],['genre','Gênero'],['platform','Plataforma']].map(([k,l])=><div key={k} style={{marginBottom:14}}><div style={{color:th.dim,fontSize:12,marginBottom:6}}>{l}</div><input style={S.inp} value={form[k]} placeholder={l} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&createProject()}/></div>)}<div style={{display:'flex',gap:10,marginTop:22}}><button style={S.btn()} onClick={createProject}>Criar</button><button style={S.btn(th.border)} onClick={()=>setShowNew(false)}>{t.cancel}</button></div></div></div>)}
+      {showNew&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:100}}><div style={{background:th.bg2,border:'1px solid '+th.border,borderRadius:18,padding:32,width:360}}><h3 style={{margin:'0 0 22px',fontSize:18}}>Novo Projeto</h3>{projectFormFields.map(({key,label})=><div key={key} style={{marginBottom:14}}><div style={{color:th.dim,fontSize:12,marginBottom:6}}>{label}</div><input style={S.inp} value={form[key]} placeholder={label} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&createProject()}/></div>)}<div style={{display:'flex',gap:10,marginTop:22}}><button style={S.btn()} onClick={createProject}>Criar</button><button style={S.btn(th.border)} onClick={()=>setShowNew(false)}>{t.cancel}</button></div></div></div>)}
       <Confirm/>
       <footer style={{padding:'12px 24px',borderTop:'1px solid '+th.border2,textAlign:'center',color:'#4b5563',fontSize:11}}>Criado por <a href="https://www.linkedin.com/in/victor-hugo-costa/" target="_blank" rel="noopener noreferrer" style={{color:th.muted,textDecoration:'none',fontWeight:600}}>Victor Hugo Costa</a> para toda a comunidade Game Dev</footer>
     </div>
