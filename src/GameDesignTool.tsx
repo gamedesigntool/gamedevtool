@@ -3118,7 +3118,25 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
 }
 
 // ── LudonarrativeGuide ────────────────────────────────────────────────────────
-function LudonarrativeGuide({project,pData,setPData,onBack,onDocCreated}){
+type LudonarrativeGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type LudonarrativeRow = {
+  id: string;
+  mechanic: string;
+  narrative: string;
+  context: string;
+  emotion: string;
+};
+type LudonarrativeRowField = Exclude<keyof LudonarrativeRow, "id">;
+
+function LudonarrativeGuide({project,setPData,onBack,onDocCreated}: LudonarrativeGuideProps){
+  if(!project)return null;
+
   const CLR=LUDONARRATIVE_CLR;
   const STEPS=LUDONARRATIVE_STEPS;
   const GUIDE=LUDONARRATIVE_GUIDE;
@@ -3137,8 +3155,8 @@ function LudonarrativeGuide({project,pData,setPData,onBack,onDocCreated}){
   const [approach,setApproach]=useState(''); // 'player' | 'designer' | ''
   const [theme,setTheme]=useState('');
   // Analysis — list of mechanic rows
-  const EMPTY_ROW=()=>({id:uid(),mechanic:'',narrative:'',context:'',emotion:''});
-  const [rows,setRows]=useState([EMPTY_ROW()]);
+  const EMPTY_ROW=(): LudonarrativeRow=>({id:uid(),mechanic:'',narrative:'',context:'',emotion:''});
+  const [rows,setRows]=useState<LudonarrativeRow[]>([EMPTY_ROW()]);
   const [activeRow,setActiveRow]=useState(0); // which row is being edited (for loop viz)
   // Interactions
   const [coreLoop,setCoreLoop]=useState('');
@@ -3150,17 +3168,17 @@ function LudonarrativeGuide({project,pData,setPData,onBack,onDocCreated}){
   const [dissonanceCheck,setDissonanceCheck]=useState('');
 
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const updateRow=(idx,field,val)=>setRows(r=>r.map((row,i)=>i===idx?{...row,[field]:val}:row));
+  const updateRow=(idx: number,field: LudonarrativeRowField,val: string)=>setRows(r=>r.map((row,i)=>i===idx?{...row,[field]:val}:row));
   const addRow=()=>{setRows(r=>[...r,EMPTY_ROW()]);setActiveRow(rows.length);};
-  const removeRow=idx=>setRows(r=>r.filter((_,i)=>i!==idx));
+  const removeRow=(idx: number)=>setRows(r=>r.filter((_,i)=>i!==idx));
 
   const filledRows=rows.filter(r=>r.mechanic.trim()&&r.narrative.trim());
-  const cur=rows[activeRow]||rows[0]||{mechanic:'',narrative:'',context:'',emotion:''};
+  const cur=rows[activeRow]||rows[0]||{id:'',mechanic:'',narrative:'',context:'',emotion:''};
 
   const getCtx=()=>`Você é um especialista em design narrativo para jogos, especializado em harmonia ludonarrativa (Ash & Despain, 2016).
 Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
@@ -3171,10 +3189,10 @@ Abordagem: ${approach==='player'?'Dirigida pelo jogador (Journey)':approach==='d
 Mecânicas documentadas: ${filledRows.length}
 Responda em português brasileiro. Use exemplos de jogos conhecidos.`;
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
     const si=Math.min(step,3);
-    const um={role:'user',content:txt};
+    const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[si],um];
     setAiMsgs(m=>{const n=[...m];n[si]=curr;return n;});
     setAiInput('');setAiLoad(true);
@@ -3285,9 +3303,9 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
 
   const saveDoc=()=>{
     const pId=project.id,mId='narrative';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'ludonarrative'};
-    setPData(p=>{
-      const curr=p?.[pId]?.[mId]||{docs:[]};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'ludonarrative'};
+    setPData((p: ProjectData)=>{
+      const curr=p[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
     });
     onDocCreated(doc);
@@ -3386,7 +3404,7 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:'7px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre design narrativo..." style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre design narrativo..." style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
               <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
             </div>
           </>)}
@@ -3396,7 +3414,7 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
               <div style={{fontSize:10,fontWeight:700,color:CLR,letterSpacing:1.5,marginBottom:10,textTransform:'uppercase'}}>📄 Resumo</div>
               {highConcept&&<div style={{marginBottom:10,background:CLR+'08',border:'1px solid '+CLR+'20',borderRadius:8,padding:'8px 12px',fontSize:11,color:CLR,fontStyle:'italic'}}>"{highConcept.slice(0,80)}{highConcept.length>80?'…':''}"</div>}
               <div style={{marginBottom:8,fontSize:11,color:'var(--gdd-dim)'}}><span style={{color:'#34d399',fontWeight:700}}>{filledRows.length}</span> loop{filledRows.length!==1?'s':''} ludonarrativo{filledRows.length!==1?'s':''}</div>
-              {filledRows.map((r,i)=>(
+              {filledRows.map(r=>(
                 <div key={r.id} style={{marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
                   <span style={{fontSize:9,color:'#34d399',fontWeight:900}}>✓</span>
                   <span style={{fontSize:11,color:CLR+'99'}}>{r.mechanic}</span>
@@ -3463,12 +3481,12 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
                   {rows.length>1&&<button onClick={e=>{e.stopPropagation();removeRow(idx);setActiveRow(Math.max(0,idx-1));}} style={{marginLeft:'auto',background:'none',border:'none',color:'#334155',cursor:'pointer',fontSize:12,padding:'2px 6px',borderRadius:4}}>✕</button>}
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                  {[
+                  {([
                     {field:'mechanic',  label:'① Mecânica',  color:'#fbbf24', hint:'O que o jogador faz — verbo gerúndio (ex: andando, pulando, coletando)'},
                     {field:'narrative', label:'② Narrativa',  color:'#34d399', hint:'Por que faz — propósito diegético (ex: explorar um ambiente desconhecido)'},
                     {field:'context',   label:'③ Contexto',   color:'#22d3ee', hint:'Onde/como acontece no espaço de jogo (ex: travessar um abismo escuro)'},
                     {field:'emotion',   label:'④ Emoção',     color:CLR,       hint:'O que o jogador sente (ex: mistério, fiero, maravilha, ambiguidade)'},
-                  ].map(f=>(
+                    ] as {field: LudonarrativeRowField; label: string; color: string; hint: string}[]).map(f=>(
                     <div key={f.field}>
                       <div style={{fontSize:10,color:f.color,fontWeight:700,letterSpacing:1,marginBottom:5,textTransform:'uppercase'}}>{f.label}</div>
                       <div style={{fontSize:10,color:'#334155',marginBottom:5,fontStyle:'italic',lineHeight:1.4}}>{f.hint}</div>
@@ -3502,7 +3520,7 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
               <div style={{fontSize:11,color:'var(--gdd-muted)',lineHeight:1.6,marginBottom:10}}>Escreva cada loop como uma frase: "[Mecânica] para [narrativa] em/com [contexto] criando [emoção]". Essas frases revelam dissonâncias.</div>
               {filledRows.length>0&&(
                 <div style={{marginBottom:10,display:'flex',flexDirection:'column',gap:4}}>
-                  {filledRows.map((r,i)=>(
+                  {filledRows.map(r=>(
                     <div key={r.id} style={{fontSize:11,color:CLR+'88',background:CLR+'08',borderRadius:6,padding:'6px 10px',fontStyle:'italic',lineHeight:1.6}}>
                       Sugerida: <em>{r.mechanic} para {r.narrative}{r.context?' em '+r.context:''}{r.emotion?', gerando '+r.emotion:''}.</em>
                     </div>
