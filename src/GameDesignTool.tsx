@@ -1581,10 +1581,29 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
 }
 
 // ── ColorsGuide ───────────────────────────────────────────────────────────────
-function ColorsGuide({project,pData,setPData,onBack,onDocCreated}){
+type ColorsGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type ColorsPrimaryId = "toy" | "fantasy" | "tension" | "progress";
+type ColorsSecondaryId = "struggle" | "risk" | "purpose" | "reward";
+type ColorsValueKey = ColorsPrimaryId | ColorsSecondaryId | "structure";
+type ColorsPrimary = Omit<(typeof COLORS_PRIMARIES)[number], "id"> & {id: ColorsPrimaryId};
+type ColorsSecondary = Omit<(typeof COLORS_SECONDARIES)[number], "id" | "parents"> & {
+  id: ColorsSecondaryId;
+  parents: ColorsPrimaryId[];
+};
+type ColorsValues = Record<ColorsValueKey, string>;
+
+function ColorsGuide({project,setPData,onBack,onDocCreated}: ColorsGuideProps){
+  if(!project)return null;
+
   const CLR=COLORS_CLR;
-  const PRIMARIES=COLORS_PRIMARIES;
-  const SECONDARIES=COLORS_SECONDARIES;
+  const PRIMARIES=COLORS_PRIMARIES as ColorsPrimary[];
+  const SECONDARIES=COLORS_SECONDARIES as ColorsSecondary[];
   const STEPS=COLORS_STEPS;
   const GUIDE=COLORS_GUIDE;
 
@@ -1615,15 +1634,16 @@ function ColorsGuide({project,pData,setPData,onBack,onDocCreated}){
   const [realDesc,setRealDesc]=useState('');
 
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
   // Map field values for the wheel
-  const vals={toy,fantasy,tension,progress,struggle,risk,purpose,reward,structure};
-  const filled=k=>vals[k]?.trim().length>0;
+  const vals: ColorsValues={toy,fantasy,tension,progress,struggle,risk,purpose,reward,structure};
+  const filled=(k: ColorsValueKey)=>vals[k].trim().length>0;
+  const isPrimary=(p: ColorsPrimary | undefined): p is ColorsPrimary=>Boolean(p);
 
   const getCtx=()=>`Você é um especialista em Game Design guiando o usuário pelo framework "Colors of Game Design" de Felipe Dal Molin (UX Collective, 2022), que se baseia em MDA, 4 Keys 2 Fun e Gamer Motivation Model.
 Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
@@ -1636,10 +1656,10 @@ ${step>=1?`- Struggle: ${struggle||'—'} | Risk: ${risk||'—'}\n- Purpose: ${p
 ${step>=2?`- Structure: ${structure||'—'}`:''}
 Guie o usuário de forma prática, referenciando sempre o framework Colors of Game Design. Foque em como as cores se conectam e se suportam mutuamente. Responda em português brasileiro.`;
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
-    const curr=[...aiMsgs[step],um];
+    const um: ChatMessage={role:'user',content:txt};
+    const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
@@ -1649,7 +1669,7 @@ Guie o usuário de forma prática, referenciando sempre o framework Colors of Ga
   };
 
   const compileHtml=()=>{
-    const sec=(label,val)=>val?`<h3>${label}</h3><p>${val}</p>`:'';
+    const sec=(label: string,val: string)=>val?`<h3>${label}</h3><p>${val}</p>`:'';
     return `<h2>🎨 Colors of Game Design — ${docTitle}</h2>
 <p><em>Documento estruturado com o framework Colors of Game Design (Felipe Dal Molin, 2022)</em></p><hr>
 <h2>🎨 Cores Primárias</h2>
@@ -1663,7 +1683,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
 
   const saveDoc=()=>{
     const pId=project.id,mId='mechanics';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'colors'};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'colors'};
     setPData(p=>{
       const curr=p?.[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
@@ -1683,7 +1703,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
   const ColorWheel=()=>{
     const cx=110,cy=110,r1=70,r2=108;
     // 8 segments: Fantasy(top), Purpose(top-right), Progress(right), Reward(bottom-right), Toy(bottom), Struggle(bottom-left), Tension(left), Risk(top-left)
-    const segments=[
+    const segments: {id: Exclude<ColorsValueKey, "structure">; label: string; startDeg: number; color: string}[]=[
       {id:'fantasy', label:'Fantasy', startDeg:-112.5, color:'#e85d9b'},
       {id:'purpose', label:'Purpose', startDeg:-67.5,  color:'#f59e0b'},
       {id:'progress',label:'Progress',startDeg:-22.5,  color:'#e85d9b'},
@@ -1693,25 +1713,19 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
       {id:'tension', label:'Tension', startDeg:157.5,  color:'#e85d9b'},
       {id:'risk',    label:'Risk',    startDeg:202.5,  color:'#f59e0b'},
     ];
-    const toRad=d=>d*Math.PI/180;
-    const arc=(cx,cy,r,startD,endD)=>{
-      const s={x:cx+r*Math.cos(toRad(startD)),y:cy+r*Math.sin(toRad(startD))};
-      const e={x:cx+r*Math.cos(toRad(endD)),  y:cy+r*Math.sin(toRad(endD))};
-      return`M${cx},${cy} L${s.x},${s.y} A${r},${r} 0 0,1 ${e.x},${e.y} Z`;
-    };
-    const labelPos=(cx,cy,r,startD,endD)=>{const mid=(startD+endD)/2;return{x:cx+r*Math.cos(toRad(mid)),y:cy+r*Math.sin(toRad(mid))};};
+    const toRad=(d: number)=>d*Math.PI/180;
+    const labelPos=(cx: number,cy: number,r: number,startD: number,endD: number)=>{const mid=(startD+endD)/2;return{x:cx+r*Math.cos(toRad(mid)),y:cy+r*Math.sin(toRad(mid))};};
     return(
       <svg viewBox="0 0 220 220" style={{width:200,height:200,flexShrink:0}}>
         {/* Background */}
         <circle cx={cx} cy={cy} r={r2+6} fill="#0a0a12" stroke="var(--gdd-border2)" strokeWidth="1"/>
-        {segments.map((seg,i)=>{
+        {segments.map((seg)=>{
           const endDeg=seg.startDeg+45;
           const isFilled=filled(seg.id);
           const isActive=isFilled;
           const gap=2;
           const sD=seg.startDeg+gap,eD=endDeg-gap;
           // outer arc
-          const outerPath=`M${cx+r1*Math.cos(toRad(sD))},${cy+r1*Math.sin(toRad(sD))} A${r2},${r2} 0 0,1 ${cx+r2*Math.cos(toRad(sD))},${cy+r2*Math.sin(toRad(sD))} L${cx+r2*Math.cos(toRad(eD))},${cy+r2*Math.sin(toRad(eD))} A${r2},${r2} 0 0,0 ${cx+r2*Math.cos(toRad(sD))},${cy+r2*Math.sin(toRad(sD))} Z`;
           // wedge path
           const s1={x:cx+r1*Math.cos(toRad(sD)),y:cy+r1*Math.sin(toRad(sD))};
           const e1={x:cx+r1*Math.cos(toRad(eD)),y:cy+r1*Math.sin(toRad(eD))};
@@ -1822,7 +1836,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:'7px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+STEPS[step].label.toLowerCase()+'...'} style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder={'Pergunte sobre '+STEPS[step].label.toLowerCase()+'...'} style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
               <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#000',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
             </div>
           </>)}
@@ -1882,7 +1896,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
               o erro clássico é dominar Struggle mas esquecer Purpose — o jogo fica tecnicamente funcional mas vazio de significado. Cada cor secundária depende das duas primárias que a formam.
             </div>
             {SECONDARIES.map(sec=>{
-              const parents=sec.parents.map(pid=>PRIMARIES.find(p=>p.id===pid));
+              const parents=sec.parents.map(pid=>PRIMARIES.find(p=>p.id===pid)).filter(isPrimary);
               const setter=sec.id==='struggle'?setStruggle:sec.id==='risk'?setRisk:sec.id==='purpose'?setPurpose:setReward;
               return(
                 <div key={sec.id} style={{background:'var(--gdd-bg2)',border:'1px solid '+(filled(sec.id)?sec.color+'55':'var(--gdd-border2)'),borderRadius:12,padding:'16px 18px',transition:'border-color .2s'}}>
