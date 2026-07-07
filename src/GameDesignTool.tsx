@@ -3044,7 +3044,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
   };
 
 
-  const ElementCard=({e}: {e: TetradElement})=>(
+  const renderElementCard=({e}: {e: TetradElement})=>(
     <div style={{background:'var(--gdd-bg2)',border:'1px solid '+(elemFilled(e.id)?e.color+'55':'var(--gdd-border2)'),borderRadius:12,padding:'16px 18px',transition:'border-color .2s'}}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
         <span style={{fontSize:18}}>{e.icon}</span>
@@ -3186,8 +3186,8 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
               <strong style={{color:CLR}}>Insight de Schell: </strong>
               Technology fica na base do diamante pois define o que é possível. O designer começa entendendo os limites e oportunidades da plataforma — restrições criativas muitas vezes geram as soluções mais elegantes.
             </div>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='technology')!}/>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='mechanics')!}/>
+            {renderElementCard({e:ELEMENTS.find(e=>e.id==='technology')!})}
+            {renderElementCard({e:ELEMENTS.find(e=>e.id==='mechanics')!})}
           </>)}
 
           {/* STEP 1 — Story + Aesthetics */}
@@ -3196,8 +3196,8 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
               <strong style={{color:CLR}}>Insight de Schell: </strong>
               Aesthetics fica no topo porque é o que o jogador encontra primeiro. Story e Mechanics têm a relação mais complexa do Tetrad — mecânicas criam liberdade, narrativas lineares exigem controle. O melhor design resolve essa tensão com mecânicas narrativas.
             </div>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='story')!}/>
-            <ElementCard e={ELEMENTS.find(e=>e.id==='aesthetics')!}/>
+            {renderElementCard({e:ELEMENTS.find(e=>e.id==='story')!})}
+            {renderElementCard({e:ELEMENTS.find(e=>e.id==='aesthetics')!})}
           </>)}
 
           {/* STEP 2 — Harmony */}
