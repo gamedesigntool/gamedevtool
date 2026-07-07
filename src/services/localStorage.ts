@@ -4,7 +4,7 @@ export function lsGet<T>(key:string,fallback:T):T{
   try{
     const v=localStorage.getItem(key);
     return v!=null?JSON.parse(v) as T:fallback;
-  }catch(e){
+  }catch{
     return fallback;
   }
 }

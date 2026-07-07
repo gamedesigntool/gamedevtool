@@ -119,6 +119,7 @@ type KanbanProps = {
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
 type InsertHtmlRef = { current: ((html: string) => void) | null };
 type EditableDiv = HTMLDivElement & { _init?: boolean };
+type DocEditorToolbarButtonProps = { label: string; title: string; color: string; exec: (cmd: string, val?: string) => void; cmd?: string; active?: boolean; onClick?: () => void };
 type SharedStyles = {
   app: CSSProperties;
   btn: (bg?: string, c?: string, ex?: CSSProperties) => CSSProperties;
@@ -156,7 +157,7 @@ if(typeof window !== 'undefined'){
   setTimeout(()=>{ window.__gdt_loaded = true; }, 5000);
 }
 
-const mkS=(_th: (typeof THEMES)[ThemeKey]): SharedStyles=>({
+const mkS=(): SharedStyles=>({
   app: {minHeight:'100vh',background:'var(--gdd-bg)',color:'var(--gdd-text)',fontFamily:'system-ui,sans-serif',fontSize:14},
   btn: (bg='#7c3aed',c='#fff',ex={})=>({background:bg,color:c,border:'none',borderRadius:8,padding:'8px 16px',cursor:'pointer',fontWeight:700,fontSize:13,...ex}),
   card: (clr: string)=>({background:'var(--gdd-bg2)',border:`1px solid ${clr}28`,borderRadius:14,padding:20,cursor:'pointer',transition:'all .2s',position:'relative',overflow:'hidden'}),
@@ -164,7 +165,7 @@ const mkS=(_th: (typeof THEMES)[ThemeKey]): SharedStyles=>({
   inp: {background:'var(--gdd-bg3)',border:'1px solid '+'var(--gdd-border)',borderRadius:8,padding:'10px 14px',color:'var(--gdd-text)',fontSize:14,outline:'none',width:'100%',boxSizing:'border-box'},
   back: {background:'none',border:'1px solid '+'var(--gdd-border)',color:'var(--gdd-muted)',borderRadius:6,padding:'5px 12px',cursor:'pointer',fontSize:12},
 });
-const S=mkS(THEMES.dark);// default for top-level components; GDDHub uses mkS(th)
+const S=mkS();// default for top-level components; shared styles use CSS variables
 
 // ── ImgResizeBar ──────────────────────────────────────────────────────────────
 function ImgResizeBar({img,color,onApply,onClose}:{img: HTMLImageElement | null; color: string; onApply: () => void; onClose: () => void}){
@@ -182,6 +183,19 @@ function ImgResizeBar({img,color,onApply,onClose}:{img: HTMLImageElement | null;
       <button onClick={onClose} style={{background:'none',border:'none',color:'var(--gdd-muted)',cursor:'pointer',fontSize:13,marginLeft:'auto'}}>✕</button>
     </div>
   );
+}
+function DocEditorToolbarButton({label,title,cmd,active=false,color,exec,onClick}:DocEditorToolbarButtonProps){
+  const handleMouseDown=(e: MouseEvent<HTMLButtonElement>)=>{
+    e.preventDefault();
+    if(onClick){
+      onClick();
+      return;
+    }
+    if(cmd){
+      exec(cmd);
+    }
+  };
+  return <button title={title} onMouseDown={handleMouseDown} style={{background:active?color+'22':'none',border:'1px solid '+(active?color:'var(--gdd-border)'),color:active?color:'var(--gdd-dim)',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:active?700:400}}>{label}</button>;
 }
 // ── DocEditor ─────────────────────────────────────────────────────────────────
 function DocEditor({value,color,onChange,insertRef}:{value: string; color: string; onChange: (value: string) => void; insertRef: InsertHtmlRef}){
@@ -210,16 +224,15 @@ function DocEditor({value,color,onChange,insertRef}:{value: string; color: strin
       setGenLoading(false);
     }
   };
-  const TB=({label,title,cmd,active=false,onClick}:{label: string; title: string; cmd?: string; active?: boolean; onClick?: () => void})=><button title={title} onMouseDown={e=>{e.preventDefault();onClick?onClick():cmd&&exec(cmd);}} style={{background:active?color+'22':'none',border:'1px solid '+(active?color:'var(--gdd-border)'),color:active?color:'var(--gdd-dim)',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:active?700:400}}>{label}</button>;
   const imgHoverStyle='[contenteditable] img:hover{outline:2px solid '+hoverClr+'88}';
   return(
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',position:'relative'}}>
       <div style={{display:'flex',alignItems:'center',gap:4,padding:'7px 12px',borderBottom:'1px solid '+'var(--gdd-border2)',background:'var(--gdd-bg)',flexWrap:'wrap',flexShrink:0}}>
-        <TB label="B" title="Negrito" cmd="bold" active={qState('bold')}/><TB label="I" title="Itálico" cmd="italic" active={qState('italic')}/><TB label="U" title="Sublinhado" cmd="underline" active={qState('underline')}/>
+        <DocEditorToolbarButton label="B" title="Negrito" cmd="bold" active={qState('bold')} color={color} exec={exec}/><DocEditorToolbarButton label="I" title="Itálico" cmd="italic" active={qState('italic')} color={color} exec={exec}/><DocEditorToolbarButton label="U" title="Sublinhado" cmd="underline" active={qState('underline')} color={color} exec={exec}/>
         <div style={{width:1,height:14,background:'var(--gdd-border)',margin:'0 2px'}}/>
-        <TB label="H1" title="Título" onClick={()=>exec('formatBlock','h2')}/><TB label="H2" title="Subtítulo" onClick={()=>exec('formatBlock','h3')}/><TB label="¶" title="Parágrafo" onClick={()=>exec('formatBlock','p')}/>
+        <DocEditorToolbarButton label="H1" title="Título" color={color} exec={exec} onClick={()=>exec('formatBlock','h2')}/><DocEditorToolbarButton label="H2" title="Subtítulo" color={color} exec={exec} onClick={()=>exec('formatBlock','h3')}/><DocEditorToolbarButton label="¶" title="Parágrafo" color={color} exec={exec} onClick={()=>exec('formatBlock','p')}/>
         <div style={{width:1,height:14,background:'var(--gdd-border)',margin:'0 2px'}}/>
-        <TB label="• Lista" title="Lista" onClick={()=>exec('insertUnorderedList')}/><TB label="1. Lista" title="Numerada" onClick={()=>exec('insertOrderedList')}/>
+        <DocEditorToolbarButton label="• Lista" title="Lista" color={color} exec={exec} onClick={()=>exec('insertUnorderedList')}/><DocEditorToolbarButton label="1. Lista" title="Numerada" color={color} exec={exec} onClick={()=>exec('insertOrderedList')}/>
         <div style={{width:1,height:14,background:'var(--gdd-border)',margin:'0 2px'}}/>
         <button onMouseDown={e=>{e.preventDefault();fileRef.current?.click();}} style={{background:'none',border:'1px solid '+'var(--gdd-border)',color:'var(--gdd-dim)',borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12}}>📷 Upload</button>
         <button onMouseDown={e=>{e.preventDefault();setImgModal(true);}} style={{background:color+'18',border:'1px solid '+color+'50',color,borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,fontWeight:600}}>🖼️ IA Image</button>
@@ -5108,10 +5121,9 @@ type GDDExporterModuleSelection = { checked?: boolean; docs: Record<DocumentId, 
 type GDDExporterSelection = Record<string, GDDExporterModuleSelection | undefined>;
 type GDDExporterSection = { mod: ModuleMeta; docs: Document[] };
 
-function GDDExporter({project,pData,onClose,lang='pt',theme='dark'}: GDDExporterProps){
+function GDDExporter({project,pData,onClose,lang='pt'}: GDDExporterProps){
   const t=TR[lang]||TR.pt;
-  const th=THEMES[theme]||THEMES.dark;
-  const S=mkS(th);
+  const S=mkS();
   const STATUS_L: Record<Document['status'], {label: string; color: string; bg: string}>={ progress:{label:t.st_progress,color:'#fbbf24',bg:'#fbbf2415'}, done:{label:t.st_done,color:'#34d399',bg:'#34d39915'} };
   const EXPORT_MODS: ModuleMeta[]=(MODULES_I18N[lang]||MODULES).filter(m=>m.id!=='brainstorming'&&m.id!=='production');
   const [sel,setSel]=useState<GDDExporterSelection>(()=>{
@@ -5216,7 +5228,7 @@ function GDDHubInner(){
   const [theme,setTheme]=useState<ThemeKey>(()=>getStoredTheme('dark'));
   const t=TR[lang]||TR.pt;
   const th=THEMES[theme]||THEMES.dark;
-  const S=mkS(th);
+  const S=mkS();
   const MODULES=(MODULES_I18N[lang]||MODULES_I18N.pt) as ModuleMeta[];
   const STATUS_L={ progress:{label:t.st_progress,color:'#fbbf24',bg:'#fbbf2415'}, done:{label:t.st_done,color:'#34d399',bg:'#34d39915'} };
 
