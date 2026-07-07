@@ -14,21 +14,21 @@ It is not:
 - import progress management
 - editor draft persistence
 
-The context exists to keep local-first behavior explicit while Supabase-backed repositories are introduced incrementally.
+The context exists to keep anonymous/unconfigured local behavior explicit while Supabase-backed repositories are introduced incrementally for authenticated cloud workspaces.
 
 ## Core Rule
 
-Login does not change the authoritative data source.
+Current runtime behavior has not changed: login does not yet enable cloud persistence.
 
-Only an explicit, confirmed local-to-cloud import may change the active source from localStorage to Supabase.
+During the Cloud Product Foundation phase, the planned cloud path is a fresh authenticated cloud workspace. Existing local projects do not need to be imported, merged, or preserved as cloud data.
 
-This preserves current behavior: users can authenticate without silently uploading, replacing, merging, deleting, or reclassifying local data.
+The future switch to cloud persistence should be explicit in implementation and UX, but it should not depend on local-to-cloud import.
 
 ## States
 
 ### `local`
 
-Used when the app is anonymous, Supabase is unconfigured, or no authenticated cloud workspace is active.
+Used when the app is anonymous or Supabase is unconfigured.
 
 - Auth status: anonymous or unconfigured
 - Authoritative source: localStorage
@@ -36,27 +36,15 @@ Used when the app is anonymous, Supabase is unconfigured, or no authenticated cl
 - Domain cloud writes allowed: no
 - Expected UI behavior: show local workspace behavior; do not show cloud project data; do not upload local data
 
-### `authenticated-local`
-
-Used when a user is authenticated but has not completed an explicit import for the active local dataset.
-
-- Auth status: authenticated
-- Authoritative source: localStorage
-- Domain cloud reads allowed: no
-- Domain cloud writes allowed: no
-- Expected UI behavior: continue showing local data; offer explicit import when eligible; clearly avoid implying sync
-
-This state may allow a dedicated import-coordination service to check import metadata, but domain repositories should still treat localStorage as authoritative.
-
 ### `cloud`
 
-Used after a successful explicit import activates the authenticated cloud workspace.
+Used when Supabase is configured, the user is authenticated, and the runtime has intentionally enabled cloud-backed repositories for the authenticated workspace.
 
 - Auth status: authenticated
 - Authoritative source: Supabase for migrated repositories
 - Domain cloud reads allowed: yes
 - Domain cloud writes allowed: yes, only for repositories that have been intentionally migrated
-- Expected UI behavior: indicate cloud workspace; keep local data preserved; avoid implying automatic local/cloud sync
+- Expected UI behavior: indicate authenticated cloud workspace; avoid implying automatic sync with localStorage
 
 ## Proposed Type Shape
 
@@ -72,21 +60,10 @@ type PersistenceContext =
       domainCloudWritesAllowed: false;
     }
   | {
-      mode: "authenticated-local";
-      authStatus: "authenticated";
-      userId: string;
-      authoritativeSource: "localStorage";
-      importStatus: "not-imported" | "unknown";
-      domainCloudReadsAllowed: false;
-      domainCloudWritesAllowed: false;
-    }
-  | {
       mode: "cloud";
       authStatus: "authenticated";
       userId: string;
       authoritativeSource: "supabase";
-      importStatus: "imported";
-      importBatchId: string;
       domainCloudReadsAllowed: true;
       domainCloudWritesAllowed: true;
     };
@@ -101,7 +78,7 @@ Repositories must not:
 - read auth state directly
 - call auth session services directly
 - infer cloud mode only from the presence of an authenticated user
-- silently switch backing stores after login
+- silently switch backing stores before the cloud persistence path is intentionally wired
 
 Explicit context keeps repository behavior testable and makes local/cloud boundaries visible at call sites.
 
@@ -109,31 +86,30 @@ Explicit context keeps repository behavior testable and makes local/cloud bounda
 
 The UI can use `PersistenceContext` to:
 
-- show an import prompt in `authenticated-local`
 - indicate whether the active workspace is local or cloud-backed
-- keep local workspace behavior after login but before import
-- move to cloud workspace behavior only after confirmed import
+- keep local workspace behavior for anonymous or unconfigured usage
+- move authenticated users into a fresh cloud workspace once cloud project persistence exists
 - return to local behavior after logout without mutating local data
 
-The UI should not present authentication alone as cloud persistence.
+Until cloud persistence is implemented, the UI should not present authentication alone as cloud persistence.
 
 ## Transitions
 
 ### Login
 
-`local` becomes `authenticated-local` when a user signs in.
+Current runtime: login does not change repository behavior.
 
-localStorage remains authoritative. The app may offer import, but no domain cloud reads or writes should occur.
+Planned Cloud Product Foundation behavior: login may resolve to `cloud` only after authenticated cloud project persistence is intentionally implemented.
 
-### Successful Import
+### Cloud Workspace Activation
 
-`authenticated-local` becomes `cloud` after the user explicitly confirms import and the import completes successfully.
+`local` may become `cloud` for an authenticated user when the app has a configured Supabase client and the cloud-backed repository path is active.
 
-Supabase becomes authoritative only for repositories that have been migrated. localStorage remains preserved.
+Supabase becomes authoritative only for repositories that have been intentionally migrated. In this phase, the first target is `projectRepository`.
 
 ### Logout
 
-`authenticated-local` or `cloud` becomes `local`.
+`cloud` becomes `local`.
 
 Logout must not delete, overwrite, sync, or otherwise mutate local data.
 
@@ -141,7 +117,7 @@ Logout must not delete, overwrite, sync, or otherwise mutate local data.
 
 When another user logs in, the context should be resolved for that user independently.
 
-Import status, import batch metadata, and cloud workspace state must not be reused across users.
+Cloud workspace state must not be reused across users.
 
 ## Non-Goals
 
@@ -149,6 +125,8 @@ Import status, import batch metadata, and cloud workspace state must not be reus
 
 - automatic sync
 - local/cloud merge
+- local-to-cloud import requirements
+- conflict resolution
 - realtime
 - collaboration
 - autosave

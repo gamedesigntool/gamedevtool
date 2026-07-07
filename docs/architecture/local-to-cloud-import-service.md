@@ -1,5 +1,13 @@
 # Local-to-Cloud Import Service
 
+## Historical Status
+
+This document is historical planning from an earlier repository migration assumption.
+
+It is not active or canonical for the Cloud Product Foundation phase. Existing local projects do not need to be migrated to cloud during this phase. Testers are expected to start with a fresh authenticated cloud workspace when cloud persistence is introduced.
+
+Do not implement this service unless local-to-cloud import is explicitly reintroduced later.
+
 ## Purpose
 
 `LocalToCloudImportService` is the planned boundary for explicitly copying local data into an authenticated cloud workspace.

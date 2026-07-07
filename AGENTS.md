@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Post-Production Readiness Baseline
+→ Cloud Product Foundation
 
 Previous completed phases:
 - Data Extraction Pass
@@ -71,22 +71,26 @@ Completed Production Readiness Pass:
 - README updated from the default Vite template to the current project state
 
 Current goals:
-- preserve the local-first production-ready baseline
+- preserve the local-first production-ready baseline until cloud persistence implementation starts
 - keep README and agent guidance aligned with real runtime behavior
-- use the repository migration documents as planning references before future implementation
+- introduce fresh authenticated cloud project persistence incrementally
+- make `projectRepository` the first cloud persistence target
+- preserve local-only behavior for anonymous and Supabase-unconfigured usage
 - keep validation commands passing before handoff
 
 Current non-goals:
-- real cloud persistence
+- local-to-cloud import
 - automatic sync
+- coexistence between local and cloud workspaces for the same user
 - local/cloud merge
-- repository implementation changes
-- repository migration implementation
+- conflict resolution
+- preserving existing local projects after login
 - realtime collaboration
 - autosave
 - global state
 - broad hooks extraction
-- Edge Functions or AI proxy implementation
+- Edge Functions or secure AI proxy implementation
+- AI backend/provider proxy decisions
 - large rewrites
 
 ---
@@ -98,13 +102,14 @@ The following documents are the current source of truth:
 - docs/architecture/document-semantics.md
 - docs/architecture/editor-orchestration.md
 - docs/architecture/editor-sync-risks.md
-- docs/architecture/local-to-cloud-import-service.md
 - docs/architecture/persistence-context.md
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/supabase-readiness.md
 - docs/architecture/supabase-schema-v1.sql
 
 These documents must be consulted before proposing architectural changes.
+
+`docs/architecture/local-to-cloud-import-service.md` is historical planning from an earlier assumption. It is not active or canonical for the Cloud Product Foundation phase unless local project import is explicitly reintroduced later.
 
 Repository migration documents remain canonical planning references. They do not mean runtime cloud persistence or repository migration has started.
 
@@ -153,19 +158,18 @@ Signing in does not enable cloud sync, cloud persistence, import, merge, protect
 
 The current priority is:
 
-→ Preserve the production-ready local-first baseline while keeping future repository migration explicit and incremental.
+→ Build toward fresh authenticated cloud project persistence while preserving local-only anonymous/unconfigured usage.
 
 The current repository migration strategy is documented in:
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/persistence-context.md
-- docs/architecture/local-to-cloud-import-service.md
 
 Repository migration has not started in runtime code. Before future implementation, re-check:
-- Which repository should migrate first?
+- How should `projectRepository` load and save authenticated cloud projects?
 - How should authenticated identity be threaded into persistence?
-- How should local and cloud coexist?
-- How should explicit import from local to cloud work?
-- How can data loss and overwrites be avoided?
+- How should anonymous/unconfigured local-only behavior stay intact?
+- How should cloud project ownership and RLS be enforced?
+- How can the project bootstrap avoid writing local defaults into cloud?
 
 ---
 
@@ -174,21 +178,21 @@ Repository migration has not started in runtime code. Before future implementati
 Repository migration remains future work.
 
 Planning areas:
-- projectRepository migration planning
-- local-first + cloud coexistence
-- explicit import UX
+- projectRepository cloud persistence planning
+- fresh authenticated cloud workspace behavior
 - ownership-aware persistence
 - implementation sequencing
 
 Current planning decisions:
 - projectRepository is the first planned migration target
 - projectDataRepository must not be migrated first
-- local-first behavior remains preserved
-- explicit local-to-cloud import is required
+- anonymous and Supabase-unconfigured local-first behavior remains preserved
+- existing local projects do not need to be migrated in this phase
+- local-to-cloud import is not required in this phase
 - no runtime cloud persistence exists yet
 - no repository has been migrated to Supabase yet
 - PersistenceContext is documented in docs/architecture/persistence-context.md
-- LocalToCloudImportService is documented in docs/architecture/local-to-cloud-import-service.md
+- LocalToCloudImportService is historical and not active for this phase
 
 Future directions:
 - cloud persistence
@@ -206,8 +210,8 @@ Future repository migration should remain planning-focused before implementation
 Preferred approach:
 1. analyze current repositories
 2. choose the first migration target
-3. define coexistence model
-4. define import UX
+3. define the authenticated cloud workspace model
+4. preserve anonymous/unconfigured local behavior
 5. define implementation order
 6. document tradeoffs
 
@@ -233,7 +237,7 @@ Hooks/controllers should only happen after:
 ## Supabase Strategy
 
 Migration philosophy:
-→ incremental coexistence, not big-bang replacement.
+→ incremental cloud-native persistence for fresh authenticated workspaces, not big-bang replacement.
 
 Completed:
 1. environment variables
@@ -252,12 +256,11 @@ Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
 
 Future:
-10. explicit local-to-cloud import UX
-11. projectRepository migration
-12. projectData migration
-13. cloud sync
-14. Edge Functions / secure AI proxy
-15. optional realtime
+10. projectRepository cloud persistence for authenticated users
+11. projectData split planning
+12. document/project data cloud persistence
+13. Edge Functions / secure AI proxy after cloud persistence is stable
+14. optional realtime
 
 ---
 
@@ -329,7 +332,7 @@ AI agents may:
 - suggest safe Git commands
 
 Current active branch:
-- feature/project-repository-cloud-migration
+- feature/cloud-product-foundation
 
 ---
 
@@ -387,8 +390,9 @@ When implementing:
 - Do not propose full rewrites
 - Do not replace all repositories at once
 - Do not migrate all data at once
-- Do not implement cloud persistence during the current baseline phase
-- Do not imply signing in enables sync or cloud persistence
+- Do not implement local-to-cloud import unless explicitly reintroduced later
+- Do not imply signing in enables sync or cloud persistence before runtime implementation exists
+- Do not introduce merge or conflict resolution for this phase
 - Do not implement Edge Functions or AI proxying yet
 - Do not introduce global state
 - Do not extract hooks prematurely

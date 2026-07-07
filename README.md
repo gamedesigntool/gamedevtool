@@ -19,6 +19,8 @@ Supabase is present only as an optional foundation for authentication. When Supa
 
 Signing in does not enable cloud persistence, cloud sync, automatic import, merge behavior, protected routes, or account pages. Local data remains localStorage-backed.
 
+The current Cloud Product Foundation direction is fresh authenticated cloud project persistence. Existing local projects do not need to be imported or merged for this phase.
+
 ## What Exists Today
 
 - Project dashboard with local project creation, cloning, deletion, and progress tracking.
@@ -36,8 +38,9 @@ Signing in does not enable cloud persistence, cloud sync, automatic import, merg
 ## What Does Not Exist Yet
 
 - Runtime cloud persistence.
+- Authenticated cloud project persistence.
 - Automatic sync between localStorage and Supabase.
-- Local-to-cloud import UX.
+- Local-to-cloud import UX, which is out of scope for this phase.
 - Local/cloud merge or conflict resolution.
 - Supabase-backed repositories for project or document data.
 - Supabase Storage-backed assets.
@@ -91,4 +94,4 @@ git diff --check
 
 ## Architecture Notes
 
-Persistence is intentionally still localStorage-backed. Supabase Auth exists to prepare future ownership-aware cloud persistence, but repository migration, explicit import, and cloud-backed project data remain future work.
+Persistence is intentionally still localStorage-backed. Supabase Auth exists to prepare future ownership-aware cloud persistence, but repository migration and cloud-backed project data remain future work.

@@ -14,6 +14,13 @@ Update after the Supabase Authentication Pass:
 - authenticated user identity is only a foundation for future cloud persistence
 - cloud sync, import, merge, sign-up, and account management remain future phases
 
+Update for the Cloud Product Foundation phase:
+
+- existing local projects do not need to be migrated to cloud for this phase
+- testers are expected to start with a fresh authenticated cloud workspace
+- local-to-cloud import, coexistence, merge strategies, conflict resolution, and automatic sync are out of scope unless explicitly reintroduced later
+- `projectRepository` remains the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
+
 ## Purpose
 
 The goal of this pass is to make the current persistence boundaries explicit and define a low-risk path toward cloud persistence.
@@ -245,7 +252,9 @@ Login should become necessary for:
 - multi-device persistence
 - future collaboration and sharing
 
-After login, local data migration should be explicit and user-controlled:
+Historical note: an earlier plan assumed local data migration after login. That is not active for the Cloud Product Foundation phase.
+
+If local import is reintroduced later, it should be explicit and user-controlled:
 
 1. Detect existing localStorage projects and project data.
 2. Ask the user to import local data into cloud storage.
@@ -327,8 +336,7 @@ Recommended order:
 9. Migrate canvas and flow data as JSONB after core documents are stable.
 10. Migrate Storage-backed images and assets later, after asset ownership and HTML reference rewriting are designed.
 
-During coexistence, localStorage should remain the rollback path.
-Cloud imports should be idempotent and should not erase local data until the user confirms the migration result.
+During the Cloud Product Foundation phase, do not design local/cloud coexistence as a requirement.
 
 ## Non-Goals
 
@@ -354,5 +362,6 @@ The next step should return to architectural planning before runtime persistence
 Recommended focus:
 
 1. Decide the first repository boundary to prepare after authentication.
-2. Keep localStorage as the active runtime persistence until import and coexistence behavior are explicitly designed.
-3. Do not begin cloud sync, local/cloud merge, sign-up, account management, or repository migration as part of the authentication pass.
+2. Keep localStorage as the active runtime persistence until authenticated cloud project persistence is intentionally implemented.
+3. Prepare `projectRepository` as the first cloud persistence target for fresh authenticated cloud workspaces.
+4. Do not begin cloud sync, local/cloud merge, local-to-cloud import, Edge Functions, or AI proxying as part of the Cloud Product Foundation documentation update.
