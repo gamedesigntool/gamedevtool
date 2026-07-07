@@ -1,73 +1,94 @@
-# React + TypeScript + Vite
+# Game Design Tool
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Game Design Tool is a guided game design platform for turning early ideas into structured project documentation. It is built around opinionated modules, guided flows, visual planning tools, and GDD-oriented writing, not as a generic text editor or chat interface.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React
+- TypeScript
+- Vite
+- localStorage persistence
+- Optional Supabase foundation for authentication
+- Cloudflare Pages deployment target
 
-## React Compiler
+## Current Status
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The app is currently local-first. Projects, project data, documents, canvas data, production tasks, settings, and related workspace state are persisted in the browser through localStorage.
 
-## Expanding the ESLint configuration
+Supabase is present only as an optional foundation for authentication. When Supabase environment variables are missing, the app remains local-only. When they are present, the app can show minimal email/password authentication UI.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Signing in does not enable cloud persistence, cloud sync, automatic import, merge behavior, protected routes, or account pages. Local data remains localStorage-backed.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## What Exists Today
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Project dashboard with local project creation, cloning, deletion, and progress tracking.
+- Guided game design modules for brainstorming, production, mechanics, characters, worldbuilding, narrative, level design, and flowcharts.
+- Document creation and editing inside project modules.
+- Document-level AI chat assistance.
+- Visual brainstorming canvas with notes, drawing, shapes, and images.
+- Production Kanban board.
+- Flow builder for visual gameplay, narrative, or decision flows.
+- Guided framework flows for selected design areas.
+- PDF export for selected GDD modules and documents.
+- Theme and language preferences saved locally.
+- Optional Supabase Auth session foundation when configured.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## What Does Not Exist Yet
+
+- Runtime cloud persistence.
+- Automatic sync between localStorage and Supabase.
+- Local-to-cloud import UX.
+- Local/cloud merge or conflict resolution.
+- Supabase-backed repositories for project or document data.
+- Supabase Storage-backed assets.
+- Edge Functions or a secure AI proxy.
+- Protected routes, account pages, or cloud workspace switching.
+- Realtime collaboration.
+
+## Environment Setup
+
+Install dependencies:
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Run locally:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+Supabase is optional. To enable the current authentication foundation, create a local environment file with placeholder values like:
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+Without these variables, the app runs in local-only mode and no Supabase-backed auth UI is required.
+
+## Available Scripts
+
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run typecheck
+npm run preview
+```
+
+## Validation
+
+Before handing off changes, run:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+git diff --check
+```
+
+## Architecture Notes
+
+Persistence is intentionally still localStorage-backed. Supabase Auth exists to prepare future ownership-aware cloud persistence, but repository migration, explicit import, and cloud-backed project data remain future work.
