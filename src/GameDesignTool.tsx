@@ -1059,12 +1059,15 @@ type MdaAesthetic = (typeof MDA_AESTHETICS)[number];
 const isMdaAesthetic = (value: MdaAesthetic | undefined): value is MdaAesthetic => Boolean(value);
 
 function MDAGuide({project,setPData,onBack,onDocCreated}: MDAGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const AI_HINTS=[
-    ['Quais estéticas jogos do mesmo gênero costumam usar?','Como combinar Challenge com Fellowship de forma eficaz?','Que emoção um jogo de '+project.genre+' deve priorizar?'],
-    ['Como criar tensão dramática nas dinâmicas deste jogo?','Que sistemas de feedback funcionam bem para '+project.genre+'?','Como as dinâmicas devem suportar a estética escolhida?'],
-    ['Quais mecânicas implementam bem a dinâmica de exploração?','Como fazer tuning de dificuldade sem frustrar o jogador?','Sugira mecânicas para o gênero '+project.genre+' na plataforma '+project.platform],
+    ['Quais estéticas jogos do mesmo gênero costumam usar?','Como combinar Challenge com Fellowship de forma eficaz?','Que emoção um jogo de '+projectGenre+' deve priorizar?'],
+    ['Como criar tensão dramática nas dinâmicas deste jogo?','Que sistemas de feedback funcionam bem para '+projectGenre+'?','Como as dinâmicas devem suportar a estética escolhida?'],
+    ['Quais mecânicas implementam bem a dinâmica de exploração?','Como fazer tuning de dificuldade sem frustrar o jogador?','Sugira mecânicas para o gênero '+projectGenre+' na plataforma '+projectPlatform],
   ];
 
   const [step,setStep]=useState(0);
@@ -1089,7 +1092,7 @@ function MDAGuide({project,setPData,onBack,onDocCreated}: MDAGuideProps){
     const aesLabels=selAes.map(id=>MDA_AESTHETICS.find(a=>a.id===id)?.label).filter(Boolean).join(', ');
     const steps=['ESTÉTICA','DINÂMICA','MECÂNICA'];
     return `Você é um especialista em Game Design guiando o usuário pelo framework MDA (Mechanics, Dynamics, Aesthetics) de Hunicke, LeBlanc e Zubek.
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento sendo criado: "${docTitle}"
 Etapa atual: ${steps[step]||''}
 Estéticas selecionadas: ${aesLabels||'Nenhuma ainda'}
@@ -1116,6 +1119,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='mechanics';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'mda'};
     setPData((p: ProjectData)=>{
@@ -1129,6 +1133,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
   const currMsgs=step<3?aiMsgs[step]:[];
   const stepGuide=step<3?MDA_GUIDE[step]:null;
 
+  if(!project)return null;
 
   return(
     <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'var(--gdd-bg)',color:'var(--gdd-text)',fontFamily:'system-ui,sans-serif',fontSize:14}}>
@@ -1138,7 +1143,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
         <span style={{color:MDA_CLR,fontWeight:700,fontSize:15}}>📐 MDA Framework</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
@@ -1249,7 +1254,7 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
               </div>
               <div>
                 <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>2 — Descreva a experiência do jogador</div>
-                <TA value={aesDesc} onChange={setAesDesc} placeholder={'Como o jogador deve se sentir ao jogar '+project.name+'? Descreva emoções, momentos-chave e a progressão da experiência...'} rows={4}/>
+                <TA value={aesDesc} onChange={setAesDesc} placeholder={'Como o jogador deve se sentir ao jogar '+projectName+'? Descreva emoções, momentos-chave e a progressão da experiência...'} rows={4}/>
               </div>
               <div>
                 <div style={{fontSize:11,color:MDA_CLR,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:'uppercase'}}>3 — Modelo estético (opcional)</div>
@@ -1329,16 +1334,19 @@ type FourKeyPriorityMap = Partial<Record<FourKeyId, FourKeyPriority>>;
 type FourKeyTextMap = Partial<Record<FourKeyId, string>>;
 
 function FourKeysGuide({project,setPData,onBack,onDocCreated}: FourKeysGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const CLR=FOUR_KEYS_CLR;
   const KEYS=FOUR_KEYS_KEYS as FourKey[];
   const STEPS=FOUR_KEYS_STEPS;
   const GUIDE=FOUR_KEYS_GUIDE;
   const AI_HINTS=[
-    ['Que combinação de chaves funciona melhor para '+project.genre+'?','Como equilibrar Hard Fun e Easy Fun sem frustrar o jogador?','Jogos de '+project.platform+' geralmente priorizam quais chaves?'],
-    ['Que momentos de gameplay geram Fiero em jogos de '+project.genre+'?','Como criar Schadenfreude saudável sem toxicidade?','Quais emoções de Altered States funcionam bem em '+project.platform+'?'],
-    ['Sugira objetos de gameplay para gerar Wonder em '+project.genre,'Que ações criam senso de espetáculo no People Factor?','Como o feedback audiovisual pode amplificar Hard Fun?'],
+    ['Que combinação de chaves funciona melhor para '+projectGenre+'?','Como equilibrar Hard Fun e Easy Fun sem frustrar o jogador?','Jogos de '+projectPlatform+' geralmente priorizam quais chaves?'],
+    ['Que momentos de gameplay geram Fiero em jogos de '+projectGenre+'?','Como criar Schadenfreude saudável sem toxicidade?','Quais emoções de Altered States funcionam bem em '+projectPlatform+'?'],
+    ['Sugira objetos de gameplay para gerar Wonder em '+projectGenre,'Que ações criam senso de espetáculo no People Factor?','Como o feedback audiovisual pode amplificar Hard Fun?'],
   ];
 
   const [step,setStep]=useState(0);
@@ -1369,7 +1377,7 @@ function FourKeysGuide({project,setPData,onBack,onDocCreated}: FourKeysGuideProp
     const keyLabels=activeKeys.map(k=>`${k.label} (${keyPriority[k.id]==='primary'?'Primária':'Secundária'})`).join(', ');
     const steps=['MAPEAMENTO DAS CHAVES','EMOÇÕES POR CHAVE','OBJETOS E AÇÕES'];
     return `Você é um especialista em Game Design guiando o usuário pelo framework 4 Keys to Fun (Why We Play Games) de Nicole Lazzaro / XEODesign.
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento: "${docTitle}"
 Etapa: ${steps[step]||''}
 Chaves ativas: ${keyLabels||'Nenhuma ainda'}
@@ -1399,6 +1407,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='mechanics';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'4keys'};
     setPData(p=>{
@@ -1412,6 +1421,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
   const currMsgs=step<3?aiMsgs[step]:[];
   const stepGuide=step<3?GUIDE[step]:null;
 
+  if(!project)return null;
 
   return(
     <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'var(--gdd-bg)',color:'var(--gdd-text)',fontFamily:'system-ui,sans-serif',fontSize:14}}>
@@ -1421,7 +1431,7 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
         <span style={{color:CLR,fontWeight:700,fontSize:15}}>🗝️ 4 Keys to Fun</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
@@ -1655,7 +1665,10 @@ type ColorsSecondary = Omit<(typeof COLORS_SECONDARIES)[number], "id" | "parents
 type ColorsValues = Record<ColorsValueKey, string>;
 
 function ColorsGuide({project,setPData,onBack,onDocCreated}: ColorsGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const CLR=COLORS_CLR;
   const PRIMARIES=COLORS_PRIMARIES as ColorsPrimary[];
@@ -1664,9 +1677,9 @@ function ColorsGuide({project,setPData,onBack,onDocCreated}: ColorsGuideProps){
   const GUIDE=COLORS_GUIDE;
 
   const AI_HINTS=[
-    ['Que tipo de Toy funciona melhor para '+project.genre+' na '+project.platform+'?','Como equilibrar Fantasy aspiracional com Tension realista?','Que jogos do gênero '+project.genre+' têm as 4 primárias bem balanceadas?'],
-    ['Como Struggle evolui conforme o jogador avança em '+project.genre+'?','Que tipos de Risk criam tensão sem frustrar o jogador casual?','Como Purpose e Reward trabalham juntos para criar satisfação duradoura?'],
-    ['Que structure funciona melhor para '+project.genre+' em '+project.platform+'?','Como a structure deve mudar entre a hora 1 e a hora 10?','Como a structure expõe o jogador gradualmente às 8 cores?'],
+    ['Que tipo de Toy funciona melhor para '+projectGenre+' na '+projectPlatform+'?','Como equilibrar Fantasy aspiracional com Tension realista?','Que jogos do gênero '+projectGenre+' têm as 4 primárias bem balanceadas?'],
+    ['Como Struggle evolui conforme o jogador avança em '+projectGenre+'?','Que tipos de Risk criam tensão sem frustrar o jogador casual?','Como Purpose e Reward trabalham juntos para criar satisfação duradoura?'],
+    ['Que structure funciona melhor para '+projectGenre+' em '+projectPlatform+'?','Como a structure deve mudar entre a hora 1 e a hora 10?','Como a structure expõe o jogador gradualmente às 8 cores?'],
   ];
 
   const [step,setStep]=useState(0);
@@ -1702,7 +1715,7 @@ function ColorsGuide({project,setPData,onBack,onDocCreated}: ColorsGuideProps){
   const isPrimary=(p: ColorsPrimary | undefined): p is ColorsPrimary=>Boolean(p);
 
   const getCtx=()=>`Você é um especialista em Game Design guiando o usuário pelo framework "Colors of Game Design" de Felipe Dal Molin (UX Collective, 2022), que se baseia em MDA, 4 Keys 2 Fun e Gamer Motivation Model.
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento: "${docTitle}"
 Etapa: ${['CORES PRIMÁRIAS','CORES SECUNDÁRIAS','STRUCTURE'][step]||''}
 Preenchido até agora:
@@ -1738,6 +1751,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='mechanics';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'colors'};
     setPData(p=>{
@@ -1754,6 +1768,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
   ];
   const currMsgs=step<3?aiMsgs[step]:[];
 
+  if(!project)return null;
 
   // SVG Color Wheel — the visual identity of this framework
   const ColorWheel=()=>{
@@ -1822,7 +1837,7 @@ ${sec('Organização geral do jogo',structure)}${sec('Simulation (Toy + Fantasy)
         <span style={{color:CLR,fontWeight:700,fontSize:15}}>🎨 Colors of Game Design</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
@@ -2059,7 +2074,10 @@ type OctalysisPhaseKey = "early" | "mid" | "late";
 type OctalysisPhaseNotes = Record<OctalysisPhaseKey, string>;
 
 function OctalysisGuide({project,setPData,onBack,onDocCreated}: OctalysisGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const CLR=OCTALYSIS_CLR;
   const CDs=OCTALYSIS_CDS as OctalysisCoreDrive[];
@@ -2068,9 +2086,9 @@ function OctalysisGuide({project,setPData,onBack,onDocCreated}: OctalysisGuidePr
   const GUIDE=OCTALYSIS_GUIDE;
 
   const AI_HINTS=[
-    ['Quais CDs White Hat são mais importantes para '+project.genre+'?','Como criar Epic Meaning em '+project.genre+' sem uma narrativa complexa?','Como balancear Development com Creativity em '+project.platform+'?'],
-    ['Como usar Scarcity sem frustrar o jogador casual de '+project.genre+'?','Que nível de Loss & Avoidance é saudável para '+project.genre+'?','Como Unpredictability pode ser usada para reter jogadores após o mid-game?'],
-    ['Qual é o perfil Octalysis ideal para '+project.genre+' em '+project.platform+'?','Como o balanço de drives muda entre onboarding e endgame?','Que drives são mais fracas em '+project.genre+' e como reforçá-las?'],
+    ['Quais CDs White Hat são mais importantes para '+projectGenre+'?','Como criar Epic Meaning em '+projectGenre+' sem uma narrativa complexa?','Como balancear Development com Creativity em '+projectPlatform+'?'],
+    ['Como usar Scarcity sem frustrar o jogador casual de '+projectGenre+'?','Que nível de Loss & Avoidance é saudável para '+projectGenre+'?','Como Unpredictability pode ser usada para reter jogadores após o mid-game?'],
+    ['Qual é o perfil Octalysis ideal para '+projectGenre+' em '+projectPlatform+'?','Como o balanço de drives muda entre onboarding e endgame?','Que drives são mais fracas em '+projectGenre+' e como reforçá-las?'],
   ];
 
   const [step,setStep]=useState(0);
@@ -2100,7 +2118,7 @@ function OctalysisGuide({project,setPData,onBack,onDocCreated}: OctalysisGuidePr
   const rightScore=rightActive.reduce((s,c)=>s+cdData[c.id].intensity,0);
 
   const getCtx=()=>`Você é um especialista em gamificação guiando o usuário pelo framework Octalysis de Yu-kai Chou.
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento: "${docTitle}"
 Core Drives ativas: ${activeCDs.map(c=>`CD${c.n} ${c.label} (intensidade ${cdData[c.id].intensity}/10)`).join(', ')||'Nenhuma ainda'}
 Score total: ${totalScore} | White Hat: ${whiteScore} | Black Hat: ${blackScore} | Left Brain: ${leftScore} | Right Brain: ${rightScore}
@@ -2135,6 +2153,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='mechanics';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'octalysis'};
     setPData(p=>{
@@ -2153,6 +2172,8 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
     true, // balance step is optional
     true,
   ];
+
+  if(!project)return null;
 
   // Octagon SVG
   const OctagonMap=()=>{
@@ -2269,7 +2290,7 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
         <span style={{color:CLR,fontWeight:700,fontSize:15}}>🔷 Octalysis</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
@@ -2474,7 +2495,10 @@ type PENSComponentData = {
 };
 
 function PENSGuide({project,setPData,onBack,onDocCreated}: PENSGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const CLR=PENS_CLR;
   const COMPONENTS=PENS_COMPONENTS;
@@ -2482,9 +2506,9 @@ function PENSGuide({project,setPData,onBack,onDocCreated}: PENSGuideProps){
   const GUIDE=PENS_GUIDE;
 
   const AI_HINTS=[
-    ['Como equilibrar Competência e Autonomia em '+project.genre+'?','Que mecânicas criam Relatedness em jogos single-player?','Como SDT explica por que jogadores param de jogar '+project.genre+'?'],
-    ['Como tornar controles de '+project.genre+' verdadeiramente intuitivos?','Que técnicas criam Presence emocional em '+project.platform+'?','Como as 3 dimensões de Presence se manifestam em '+project.genre+'?'],
-    ['Quais itens PENS são mais úteis para testar '+project.genre+' em estágio de protótipo?','Como interpretar scores baixos de Autonomia no playtest?','Que mudanças de design resolvem problemas de Competência identificados no PENS?'],
+    ['Como equilibrar Competência e Autonomia em '+projectGenre+'?','Que mecânicas criam Relatedness em jogos single-player?','Como SDT explica por que jogadores param de jogar '+projectGenre+'?'],
+    ['Como tornar controles de '+projectGenre+' verdadeiramente intuitivos?','Que técnicas criam Presence emocional em '+projectPlatform+'?','Como as 3 dimensões de Presence se manifestam em '+projectGenre+'?'],
+    ['Quais itens PENS são mais úteis para testar '+projectGenre+' em estágio de protótipo?','Como interpretar scores baixos de Autonomia no playtest?','Que mudanças de design resolvem problemas de Competência identificados no PENS?'],
   ];
 
   const [step,setStep]=useState(0);
@@ -2508,7 +2532,7 @@ function PENSGuide({project,setPData,onBack,onDocCreated}: PENSGuideProps){
   const gameComponents=COMPONENTS.filter(c=>!c.sdt);
 
   const getCtx=()=>`Você é um especialista em game design guiando o usuário pelo framework PENS (Player Experience of Need Satisfaction) de Ryan, Rigby e Przybylski (2006), baseado na Self-Determination Theory.
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento: "${docTitle}"
 Etapa: ${['NECESSIDADES SDT','CONTROLS & PRESENCE','PLAYTEST GUIDE'][step]||''}
 Componentes preenchidos: ${COMPONENTS.filter(c=>filled(c.id)).map(c=>c.label).join(', ')||'Nenhum ainda'}
@@ -2540,6 +2564,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='mechanics';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'pens'};
     setPData((p: ProjectData)=>{
@@ -2554,6 +2579,8 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
     gameComponents.some(c=>filled(c.id)),
     true,
   ];
+
+  if(!project)return null;
 
   // Pentagon radar SVG
   const PentagonRadar=()=>{
@@ -2634,7 +2661,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
         <span style={{color:CLR,fontWeight:700,fontSize:15}}>🧠 PENS</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
@@ -2859,7 +2886,10 @@ type TetradElementData = Partial<Record<TetradSubfieldKey, string>>;
 type TetradElementDataById = Record<TetradElementId, TetradElementData>;
 
 function ElementalTetradGuide({project,setPData,onBack,onDocCreated}: TetradGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const CLR=TETRAD_CLR;
   const ELEMENTS=TETRAD_ELEMENTS as TetradElement[];
@@ -2867,9 +2897,9 @@ function ElementalTetradGuide({project,setPData,onBack,onDocCreated}: TetradGuid
   const GUIDE=TETRAD_GUIDE;
 
   const AI_HINTS=[
-    ['Como a tecnologia de '+project.platform+' pode habilitar mecânicas únicas?','Que restrições técnicas de '+project.platform+' posso transformar em features criativas?','Como as mecânicas de '+project.genre+' podem reforçar o tema central do jogo?'],
-    ['Como equilibrar narrativa dirigida e emergência em '+project.genre+'?','Que escolhas estéticas reforçam melhor as mecânicas de '+project.genre+'?','Como criar identidade estética distinta para '+project.name+' em '+project.platform+'?'],
-    ['Os 4 elementos do meu Tetrad estão em harmonia?','Qual elemento está mais fraco e como fortalecê-lo?','Qual é o tema central que une os 4 elementos de '+project.name+'?'],
+    ['Como a tecnologia de '+projectPlatform+' pode habilitar mecânicas únicas?','Que restrições técnicas de '+projectPlatform+' posso transformar em features criativas?','Como as mecânicas de '+projectGenre+' podem reforçar o tema central do jogo?'],
+    ['Como equilibrar narrativa dirigida e emergência em '+projectGenre+'?','Que escolhas estéticas reforçam melhor as mecânicas de '+projectGenre+'?','Como criar identidade estética distinta para '+projectName+' em '+projectPlatform+'?'],
+    ['Os 4 elementos do meu Tetrad estão em harmonia?','Qual elemento está mais fraco e como fortalecê-lo?','Qual é o tema central que une os 4 elementos de '+projectName+'?'],
   ];
 
   const [step,setStep]=useState(0);
@@ -2896,7 +2926,7 @@ function ElementalTetradGuide({project,setPData,onBack,onDocCreated}: TetradGuid
   const harmonyScore=filledEls.length; // 0-4
 
   const getCtx=()=>`Você é um especialista em game design guiando pelo Elemental Tetrad de Jesse Schell (The Art of Game Design, 2008).
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento: "${docTitle}"
 Tema central: "${theme||'Não definido ainda'}"
 Elementos preenchidos: ${filledEls.map(e=>e.label).join(', ')||'Nenhum ainda'}
@@ -2932,6 +2962,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='mechanics';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'tetrad'};
     setPData(p=>{
@@ -2947,6 +2978,8 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
     elemFilled('story')||elemFilled('aesthetics'),
     true,
   ];
+
+  if(!project)return null;
 
   // Diamond SVG — live visualization
   const DiamondViz=()=>{
@@ -3040,7 +3073,7 @@ ${harmonyNotes?`<h3>Como os 4 elementos se reforçam</h3><p>${harmonyNotes}</p>`
         <span style={{color:CLR,fontWeight:700,fontSize:15}}>◈ Elemental Tetrad</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
@@ -3263,17 +3296,20 @@ type LudonarrativeRow = {
 type LudonarrativeRowField = Exclude<keyof LudonarrativeRow, "id">;
 
 function LudonarrativeGuide({project,setPData,onBack,onDocCreated}: LudonarrativeGuideProps){
-  if(!project)return null;
+  const projectName=project?.name||'Projeto';
+  const projectGenre=project?.genre||'jogo';
+  const projectPlatform=project?.platform||'plataforma';
+  const projectEmoji=project?.emoji||'🎮';
 
   const CLR=LUDONARRATIVE_CLR;
   const STEPS=LUDONARRATIVE_STEPS;
   const GUIDE=LUDONARRATIVE_GUIDE;
 
   const AI_HINTS=[
-    ['Qual abordagem narrativa combina melhor com '+project.genre+'?','Como definir um bom high concept para '+project.name+'?','Como identificar o tema central da experiência ludonarrativa?'],
-    ['Como transformar uma mecânica de '+project.genre+' em um loop ludonarrativo?','Que emoções são mais adequadas para '+project.genre+'?','Que tipo de contexto fortalece mecânicas de exploração?'],
+    ['Qual abordagem narrativa combina melhor com '+projectGenre+'?','Como definir um bom high concept para '+projectName+'?','Como identificar o tema central da experiência ludonarrativa?'],
+    ['Como transformar uma mecânica de '+projectGenre+' em um loop ludonarrativo?','Que emoções são mais adequadas para '+projectGenre+'?','Que tipo de contexto fortalece mecânicas de exploração?'],
     ['Como conectar os loops ludonarrativos em um flow único?','Como equilibrar narrativa emergente e narrativa embutida?','Como o estado de sucesso de uma mecânica pode alimentar a próxima?'],
-    ['Como garantir que os sistemas suportem a harmonia ludonarrativa?','Que sistemas seriam necessários para as mecânicas de '+project.genre+'?','Como testar se um novo sistema cria dissonância?'],
+    ['Como garantir que os sistemas suportem a harmonia ludonarrativa?','Que sistemas seriam necessários para as mecânicas de '+projectGenre+'?','Como testar se um novo sistema cria dissonância?'],
   ];
 
   const [step,setStep]=useState(0);
@@ -3309,7 +3345,7 @@ function LudonarrativeGuide({project,setPData,onBack,onDocCreated}: Ludonarrativ
   const cur=rows[activeRow]||rows[0]||{id:'',mechanic:'',narrative:'',context:'',emotion:''};
 
   const getCtx=()=>`Você é um especialista em design narrativo para jogos, especializado em harmonia ludonarrativa (Ash & Despain, 2016).
-Projeto: "${project.name}" | Gênero: ${project.genre} | Plataforma: ${project.platform}
+Projeto: "${projectName}" | Gênero: ${projectGenre} | Plataforma: ${projectPlatform}
 Documento: "${docTitle}"
 High Concept: "${highConcept||'Não definido'}"
 Tema Central: "${theme||'Não definido'}"
@@ -3430,6 +3466,7 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
   };
 
   const saveDoc=()=>{
+    if(!project)return;
     const pId=project.id,mId='narrative';
     const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'ludonarrative'};
     setPData((p: ProjectData)=>{
@@ -3441,6 +3478,8 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
 
   const si=Math.min(step,3);
 
+  if(!project)return null;
+
   return(
     <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'var(--gdd-bg)',color:'var(--gdd-text)',fontFamily:'system-ui,sans-serif',fontSize:14}}>
       {/* Header */}
@@ -3449,7 +3488,7 @@ ${dissonanceCheck?`<h3>Checklist de Dissonância</h3><p>${dissonanceCheck}</p>`:
         <span style={{color:CLR,fontWeight:700,fontSize:15}}>📖 Ludonarrativa</span>
         <span style={{color:'var(--gdd-border)'}}>·</span>
         <input value={docTitle} onChange={e=>setDocTitle(e.target.value)} style={{background:'transparent',border:'none',color:'var(--gdd-text)',fontSize:14,fontWeight:600,outline:'none',padding:'2px 8px',borderRadius:5,flex:1,minWidth:0}} onFocus={e=>e.target.style.background='var(--gdd-bg3)'} onBlur={e=>e.target.style.background='transparent'}/>
-        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{project.emoji} {project.name}</span>
+        <span style={{fontSize:11,color:'#334155',whiteSpace:'nowrap'}}>{projectEmoji} {projectName}</span>
       </div>
 
       {/* Stepper */}
