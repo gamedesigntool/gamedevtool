@@ -4092,6 +4092,10 @@ function fbAutoSize(type: string, label: string): {w: number; h: number}{
     h:Math.max(def.h, rawH+extraH),
   };
 }
+const withFlowNodeSize=(node: FlowNode): FlowNode=>{
+  const {w,h}=fbAutoSize(node.type,node.label);
+  return{...node,w:node.w??w,h:node.h??h};
+};
 
 function fbPortAbs(node: FlowNode, port?: string): [number, number]{
   const d=getFlowNodeDef(node.type),w=node.w||d.w,h=node.h||d.h;
@@ -4165,7 +4169,7 @@ function FbNodePreview({type,color}: FbNodePreviewProps){
 
 function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Project; pData: ProjectData; setPData: SetProjectData; doc: Document | null; onBack: () => void; lang?: LangKey}){
   const CLR='#f472b6';
-  const [nodes,setNodes]=useState<FlowNode[]>(()=>doc?.flowData?.nodes||[]);
+  const [nodes,setNodes]=useState<FlowNode[]>(()=>(doc?.flowData?.nodes||[]).map(withFlowNodeSize));
   const [edges,setEdges]=useState<FlowEdge[]>(()=>doc?.flowData?.edges||[]);
   const [selected,setSelected]=useState<FlowSelection>(null);
   const [dragging,setDragging]=useState<FlowDragging>(null);
@@ -4186,11 +4190,19 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
   const [pickerMod,setPickerMod]=useState<ModuleMeta | null>(null);
   const svgRef=useRef<SVGSVGElement | null>(null);
   const docId=useRef(doc?.id||uid());
-
-  // Recalcula tamanho de todos os nós ao montar (garante que dados pré-carregados também ficam corretos)
-  useEffect(()=>{
-    setNodes(ns=>ns.map(n=>{const{w,h}=fbAutoSize(n.type,n.label);return{...n,w,h};}));
-  },[]);
+  const markUnsaved=useCallback(()=>setSaved(false),[]);
+  const updateNodes=useCallback((updater: SetStateAction<FlowNode[]>)=>{
+    markUnsaved();
+    setNodes(updater);
+  },[markUnsaved]);
+  const updateEdges=useCallback((updater: SetStateAction<FlowEdge[]>)=>{
+    markUnsaved();
+    setEdges(updater);
+  },[markUnsaved]);
+  const updateTitle=useCallback((nextTitle: string)=>{
+    markUnsaved();
+    setTitle(nextTitle);
+  },[markUnsaved]);
 
   const saveFlow=useCallback(()=>{
     const mId='flowcharts',pId=project.id;
@@ -4205,21 +4217,19 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     setSaved(true);
   },[nodes,edges,title,project.id,doc,setPData]);
 
-  useEffect(()=>{setSaved(false);},[nodes,edges,title]);
-
   useEffect(()=>{
     const h=(e: globalThis.KeyboardEvent)=>{
       if((e.key==='Delete'||e.key==='Backspace')&&selected&&!editingId&&!editingTitle){
         e.preventDefault();
-        if(selected.type==='node'){setNodes(ns=>ns.filter(n=>n.id!==selected.id));setEdges(es=>es.filter(e=>e.from!==selected.id&&e.to!==selected.id));}
-        else setEdges(es=>es.filter(e=>e.id!==selected.id));
+        if(selected.type==='node'){updateNodes(ns=>ns.filter(n=>n.id!==selected.id));updateEdges(es=>es.filter(e=>e.from!==selected.id&&e.to!==selected.id));}
+        else updateEdges(es=>es.filter(e=>e.id!==selected.id));
         setSelected(null);
       }
       if(e.key==='Escape'){setEditingId(null);setConnecting(null);}
     };
     window.addEventListener('keydown',h);
     return()=>window.removeEventListener('keydown',h);
-  },[selected,editingId,editingTitle]);
+  },[selected,editingId,editingTitle,updateNodes,updateEdges]);
 
   const toCanvas=(e: MouseEvent<Element>): CanvasPoint=>{
     const r=svgRef.current?.getBoundingClientRect();
@@ -4232,7 +4242,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     const cx=(svgRef.current?.clientWidth||800)/2,cy=(svgRef.current?.clientHeight||500)/2;
     const x=(cx-pan.x)/zoom-d.w/2,y=(cy-pan.y)/zoom-d.h/2;
     const n={id:uid(),type,x,y,w:d.w,h:d.h,label:d.label};
-    setNodes(ns=>[...ns,n]);
+    updateNodes(ns=>[...ns,n]);
     setSelected({type:'node',id:n.id});
   };
 
@@ -4245,7 +4255,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
   };
   const onMove=(e: MouseEvent<SVGSVGElement>)=>{
     if(panning)setPan({x:panning.sp.x+(e.clientX-panning.sx),y:panning.sp.y+(e.clientY-panning.sy)});
-    if(dragging){const{x,y}=toCanvas(e);setNodes(ns=>ns.map(n=>n.id===dragging.id?{...n,x:x-dragging.ox,y:y-dragging.oy}:n));}
+    if(dragging){const{x,y}=toCanvas(e);updateNodes(ns=>ns.map(n=>n.id===dragging.id?{...n,x:x-dragging.ox,y:y-dragging.oy}:n));}
     if(connecting){const{x,y}=toCanvas(e);setConnecting(c=>c?({...c,cx:x,cy:y}):c);}
   };
   const onUp=(e: MouseEvent<SVGSVGElement>)=>{
@@ -4260,7 +4270,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
         if(!source){setConnecting(null);return;}
         FLOW_PORTS.forEach(tp=>{const[bx,by]=fbPortAbs(target,tp);const[ax,ay]=fbPortAbs(source,connecting.fromPort);const d=Math.hypot(ax-bx,ay-by);if(d<bestD){bestD=d;bestP=tp;}});
         const dup=edges.some(e=>e.from===connecting.fromId&&e.to===target.id);
-        if(!dup)setEdges(es=>[...es,{id:uid(),from:connecting.fromId,to:target.id,fromPort:connecting.fromPort,toPort:bestP}]);
+        if(!dup)updateEdges(es=>[...es,{id:uid(),from:connecting.fromId,to:target.id,fromPort:connecting.fromPort,toPort:bestP}]);
       }
       setConnecting(null);
     }
@@ -4288,7 +4298,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
     if(!n)return;
     setEditingId(nodeId);setEditLabel(n.label);setDragging(null);
   };
-  const commitLabel=()=>{setNodes(ns=>ns.map(n=>{if(n.id!==editingId)return n;const{w,h}=fbAutoSize(n.type,editLabel);return{...n,label:editLabel,w,h};}));setEditingId(null);};
+  const commitLabel=()=>{updateNodes(ns=>ns.map(n=>{if(n.id!==editingId)return n;const{w,h}=fbAutoSize(n.type,editLabel);return{...n,label:editLabel,w,h};}));setEditingId(null);};
   const onWheel=(e: WheelEvent<SVGSVGElement>)=>{e.preventDefault();setZoom(z=>Math.max(0.25,Math.min(3,z*(e.deltaY>0?.88:1.12))));};
 
   const selNode=selected?.type==='node'?nodes.find(n=>n.id===selected.id):null;
@@ -4301,7 +4311,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <button style={S.back} onClick={onBack}>← {project.name} / Fluxogramas</button>
           {editingTitle
-            ?<input value={title} onChange={e=>setTitle(e.target.value)} onBlur={()=>setEditingTitle(false)} onKeyDown={e=>{if(e.key==='Enter')setEditingTitle(false);}} autoFocus style={{...S.inp,width:200,padding:'4px 10px',fontSize:14,fontWeight:700}}/>
+            ?<input value={title} onChange={e=>updateTitle(e.target.value)} onBlur={()=>setEditingTitle(false)} onKeyDown={e=>{if(e.key==='Enter')setEditingTitle(false);}} autoFocus style={{...S.inp,width:200,padding:'4px 10px',fontSize:14,fontWeight:700}}/>
             :<span style={{color:CLR,fontWeight:700,fontSize:15,cursor:'text'}} onDoubleClick={()=>setEditingTitle(true)}>{title}</span>
           }
           {!saved&&<span style={{fontSize:10,color:'var(--gdd-muted)',marginLeft:4}}>● não salvo</span>}
@@ -4370,7 +4380,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
             <div style={{marginTop:4,borderTop:'1px solid '+'var(--gdd-border2)',paddingTop:8,display:'flex',flexDirection:'column',gap:6}}>
               <div style={{fontSize:9,color:'#334155',fontWeight:700,letterSpacing:1,textTransform:'uppercase'}}>Selecionado</div>
               <div style={{fontSize:11,color:getFlowNodeDef(selNode.type).color,fontWeight:700}}>{getFlowNodeDef(selNode.type).label}</div>
-              <button onClick={()=>{const selectedNodeId=selNode.id;setNodes(ns=>ns.filter(n=>n.id!==selectedNodeId));setEdges(es=>es.filter(e=>e.from!==selectedNodeId&&e.to!==selectedNodeId));setSelected(null);}}
+              <button onClick={()=>{const selectedNodeId=selNode.id;updateNodes(ns=>ns.filter(n=>n.id!==selectedNodeId));updateEdges(es=>es.filter(e=>e.from!==selectedNodeId&&e.to!==selectedNodeId));setSelected(null);}}
                 style={S.btn('#3d1515','#f87171',{fontSize:11,padding:'5px 8px',width:'100%',borderRadius:6,border:'1px solid #f8717130'})}>
                 🗑 Excluir nó
               </button>
@@ -4380,7 +4390,7 @@ function FlowBuilder({project,pData,setPData,doc,onBack,lang='pt'}:{project: Pro
             <div style={{marginTop:4,borderTop:'1px solid '+'var(--gdd-border2)',paddingTop:8,display:'flex',flexDirection:'column',gap:6}}>
               <div style={{fontSize:9,color:'#334155',fontWeight:700,letterSpacing:1,textTransform:'uppercase'}}>Selecionado</div>
               <div style={{fontSize:11,color:'var(--gdd-dim)'}}>Conexão</div>
-              <button onClick={()=>{const selectedEdgeId=selEdge.id;setEdges(es=>es.filter(e=>e.id!==selectedEdgeId));setSelected(null);}}
+              <button onClick={()=>{const selectedEdgeId=selEdge.id;updateEdges(es=>es.filter(e=>e.id!==selectedEdgeId));setSelected(null);}}
                 style={S.btn('#3d1515','#f87171',{fontSize:11,padding:'5px 8px',width:'100%',borderRadius:6,border:'1px solid #f8717130'})}>
                 🗑 Excluir conexão
               </button>
