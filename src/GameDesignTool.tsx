@@ -2371,7 +2371,23 @@ ${phaseNotes.late?`<h3>🏆 Endgame / Retenção</h3><p>${phaseNotes.late}</p>`:
 }
 
 // ── PENSGuide ─────────────────────────────────────────────────────────────────
-function PENSGuide({project,pData,setPData,onBack,onDocCreated}){
+type PENSGuideProps = {
+  project: Project | null;
+  pData: ProjectData;
+  setPData: SetProjectData;
+  onBack: () => void;
+  onDocCreated: (doc: Document) => void;
+};
+type PENSComponent = (typeof PENS_COMPONENTS)[number];
+type PENSComponentData = {
+  design: string;
+  testPlan: string;
+  targetScore: number;
+};
+
+function PENSGuide({project,setPData,onBack,onDocCreated}: PENSGuideProps){
+  if(!project)return null;
+
   const CLR=PENS_CLR;
   const COMPONENTS=PENS_COMPONENTS;
   const STEPS=PENS_STEPS;
@@ -2386,19 +2402,19 @@ function PENSGuide({project,pData,setPData,onBack,onDocCreated}){
   const [step,setStep]=useState(0);
   const [docTitle,setDocTitle]=useState('Nova Mecânica — PENS');
   // Per-component data
-  const [compData,setCompData]=useState(()=>
-    Object.fromEntries(COMPONENTS.map(c=>[c.id,{design:'',testPlan:'',targetScore:5}]))
+  const [compData,setCompData]=useState<Record<string, PENSComponentData>>(()=>
+    Object.fromEntries(COMPONENTS.map(c=>[c.id,{design:'',testPlan:'',targetScore:5}])) as Record<string, PENSComponentData>
   );
   const [overallVision,setOverallVision]=useState('');
   const [aiInput,setAiInput]=useState('');
-  const [aiMsgs,setAiMsgs]=useState([[],[],[]]);
+  const [aiMsgs,setAiMsgs]=useState<ChatMessage[][]>([[],[],[]]);
   const [aiLoad,setAiLoad]=useState(false);
   const chatEndRef=useRef<HTMLDivElement | null>(null);
 
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[aiMsgs,aiLoad]);
 
-  const setComp=(id,field,val)=>setCompData(d=>({...d,[id]:{...d[id],[field]:val}}));
-  const filled=id=>compData[id]?.design?.trim().length>0;
+  const setComp=<K extends keyof PENSComponentData>(id: string,field: K,val: PENSComponentData[K])=>setCompData(d=>({...d,[id]:{...d[id],[field]:val}}));
+  const filled=(id: string)=>compData[id]?.design?.trim().length>0;
 
   const sdtComponents=COMPONENTS.filter(c=>c.sdt);
   const gameComponents=COMPONENTS.filter(c=>!c.sdt);
@@ -2410,9 +2426,9 @@ Etapa: ${['NECESSIDADES SDT','CONTROLS & PRESENCE','PLAYTEST GUIDE'][step]||''}
 Componentes preenchidos: ${COMPONENTS.filter(c=>filled(c.id)).map(c=>c.label).join(', ')||'Nenhum ainda'}
 Guie com base em SDT e na pesquisa empírica de Ryan et al. (2006). Foque em como satisfazer cada necessidade através de mecânicas concretas. Responda em português brasileiro.`;
 
-  const sendAi=async(msg)=>{
+  const sendAi=async(msg?: string)=>{
     const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
-    const um={role:'user',content:txt};
+    const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
@@ -2437,9 +2453,9 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
 
   const saveDoc=()=>{
     const pId=project.id,mId='mechanics';
-    const doc={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'pens'};
-    setPData(p=>{
-      const curr=p?.[pId]?.[mId]||{docs:[]};
+    const doc: Document={id:uid(),title:docTitle,content:compileHtml(),messages:[],status:'progress',createdAt:todayStr(),updatedAt:null,framework:'pens'};
+    setPData((p: ProjectData)=>{
+      const curr=p[pId]?.[mId]||{docs:[]};
       return{...p,[pId]:{...(p[pId]||{}),[mId]:{...curr,docs:[...(curr.docs||[]),doc]}}};
     });
     onDocCreated(doc);
@@ -2454,7 +2470,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
   // Pentagon radar SVG
   const PentagonRadar=()=>{
     const cx=110,cy=115,maxR=85;
-    const toR=a=>a*Math.PI/180;
+    const toR=(a: number)=>a*Math.PI/180;
     // 5 vertices: top, upper-right, lower-right, lower-left, upper-left
     const angles=[-90,-90+72,-90+144,-90+216,-90+288];
     const pts=COMPONENTS.map((c,i)=>{
@@ -2500,7 +2516,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
   };
 
 
-  const CompCard=({c})=>{
+  const CompCard=({c}: {c: PENSComponent})=>{
     const cd=compData[c.id];
     return(
       <div style={{background:'var(--gdd-bg2)',border:'1px solid '+(filled(c.id)?c.color+'55':'var(--gdd-border2)'),borderRadius:12,padding:'16px 18px',transition:'border-color .2s'}}>
@@ -2608,7 +2624,7 @@ ${overallVision?`<blockquote><strong>Visão geral:</strong> ${overallVision}</bl
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:'7px 10px',borderTop:'1px solid '+'var(--gdd-border2)',display:'flex',gap:6,background:'var(--gdd-bg)',flexShrink:0}}>
-              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre PENS..." style={{...S.inp,flex:1,fontSize:11,padding:'6px 10px'}}/>
+              <input value={aiInput} onChange={e=>setAiInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendAi()} placeholder="Pergunte sobre PENS..." style={{...(S.inp as CSSProperties),flex:1,fontSize:11,padding:'6px 10px'}}/>
               <button style={S.btn(aiLoad?'var(--gdd-border)':CLR,'#fff',{padding:'0 11px',alignSelf:'stretch',borderRadius:7,fontSize:13})} onClick={()=>sendAi()} disabled={aiLoad}>↑</button>
             </div>
           </>)}
