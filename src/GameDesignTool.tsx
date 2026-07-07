@@ -281,9 +281,9 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
   useEffect(()=>{toolRef.current=tool;},[tool]);
   useEffect(()=>{zoomRef.current=zoom;},[zoom]);
 
-  useEffect(()=>{setPData(p=>({...p,[project.id]:{...(p[project.id]||{}),canvas:{elements,strokes}}}));},[elements,strokes]);
+  useEffect(()=>{setPData(p=>({...p,[project.id]:{...(p[project.id]||{}),canvas:{elements,strokes}}}));},[elements,strokes,project.id,setPData]);
 
-  const redrawStrokes=()=>{
+  const redrawStrokes=useCallback(()=>{
     const cv=cvRef.current;if(!cv)return;
     const ctx=cv.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,cv.width,cv.height);
     const strokesSnap=strokes;
@@ -292,15 +292,15 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
       ctx.beginPath();ctx.strokeStyle=s.color;ctx.lineWidth=s.width;ctx.lineCap='round';ctx.lineJoin='round';
       ctx.moveTo(s.points[0].x,s.points[0].y);s.points.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
     });
-  };
+  },[strokes]);
 
   useEffect(()=>{
     const cv=cvRef.current,board=boardRef.current;if(!cv||!board)return;
     const sz=()=>{cv.width=board.offsetWidth;cv.height=board.offsetHeight;redrawStrokes();};
     sz();window.addEventListener('resize',sz);return()=>window.removeEventListener('resize',sz);
-  },[]);
+  },[redrawStrokes]);
 
-  useEffect(()=>{redrawStrokes();},[strokes]);
+  useEffect(()=>{redrawStrokes();},[redrawStrokes]);
   useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:'smooth'});},[msgs,chatLoad]);
 
   const bp=(e: MouseEvent<Element>): CanvasPoint=>{const r=boardRef.current?.getBoundingClientRect();if(!r)return{x:0,y:0};return{x:(e.clientX-r.left)/zoomRef.current,y:(e.clientY-r.top)/zoomRef.current};};
