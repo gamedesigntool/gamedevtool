@@ -34,7 +34,7 @@ Do NOT simplify the product into:
 
 The project is in:
 
-→ Cloud Product Foundation
+→ Secure AI Foundation
 
 Previous completed phases:
 - Data Extraction Pass
@@ -51,6 +51,7 @@ Previous completed phases:
 - Supabase Authentication Pass
 - Repository Migration Planning Pass
 - Production Readiness Pass
+- Cloud Product Foundation
 
 Completed Supabase Authentication Pass:
 - optional Supabase authentication
@@ -70,14 +71,22 @@ Completed Production Readiness Pass:
 - minimum auth UX with login, signup, password reset, logout, and signed-in user email display
 - README updated from the default Vite template to the current project state
 
+Completed Cloud Product Foundation:
+- authenticated users use Supabase for the top-level project list when Supabase is configured
+- authenticated cloud projects use Supabase `project_data` for the active project's internal content blob
+- anonymous and Supabase-unconfigured users remain localStorage-backed
+- active Supabase migrations remain limited to `projects` and `project_data`
+- local-to-cloud import, automatic sync, merge, realtime collaboration, and Storage/assets remain out of scope
+
 Current goals:
-- preserve the local-first production-ready baseline for anonymous and Supabase-unconfigured usage
-- keep README and agent guidance aligned with real runtime behavior
-- keep fresh authenticated cloud project list persistence stable
-- keep fresh authenticated active project data blob persistence stable
-- keep active Supabase migrations limited to the current runtime schema: `projects` and `project_data`
-- keep `projectRepository` as the first cloud persistence target
-- preserve local-only behavior for anonymous and Supabase-unconfigured usage
+- establish the secure AI architecture foundation
+- move future AI execution toward a secure backend boundary
+- keep provider secrets out of frontend code
+- keep the current cloud persistence baseline stable
+- preserve local-first anonymous and Supabase-unconfigured behavior until explicit AI product decisions change it
+- prefer Supabase Edge Functions as the MVP secure AI proxy unless implementation findings prove otherwise
+- migrate text AI before image generation
+- avoid overbuilding multi-provider abstractions before the first secure provider path works
 - keep validation commands passing before handoff
 
 Current non-goals:
@@ -93,8 +102,10 @@ Current non-goals:
 - broad hooks extraction
 - normalized documents/tasks/canvas/assets/settings tables in active migrations
 - Supabase Storage/assets handling
-- Edge Functions or secure AI proxy implementation
-- AI backend/provider proxy decisions
+- image generation ownership/storage migration unless explicitly reintroduced
+- RAG, embeddings, vector memory, workflow engines, complex billing, or enterprise rate limiting
+- prompt registry/versioning as a full system
+- broad multi-provider framework architecture
 - large rewrites
 
 ---
@@ -108,12 +119,13 @@ The following documents are the current source of truth:
 - docs/architecture/editor-sync-risks.md
 - docs/architecture/persistence-context.md
 - docs/architecture/repository-migration-strategy.md
+- docs/architecture/secure-ai-foundation.md
 - docs/architecture/supabase-readiness.md
 - docs/architecture/supabase-schema-v1.sql
 
 These documents must be consulted before proposing architectural changes.
 
-`docs/architecture/local-to-cloud-import-service.md` is historical planning from an earlier assumption. It is not active or canonical for the Cloud Product Foundation phase unless local project import is explicitly reintroduced later.
+`docs/architecture/local-to-cloud-import-service.md` is historical planning from an earlier assumption. It is not active or canonical for the Secure AI Foundation phase unless local project import is explicitly reintroduced later.
 
 Repository migration documents remain canonical planning references. Runtime cloud persistence has started for the authenticated top-level project list and active `project_data` blobs.
 
@@ -159,7 +171,9 @@ Anonymous and Supabase-unconfigured users remain localStorage-backed.
 Project data remains local-only for anonymous and Supabase-unconfigured usage.
 Normalized documents, tasks, canvas, chats, settings, and assets remain future work.
 Active Supabase migrations must create only the runtime tables currently used by the app: `projects` and `project_data`.
-Signing in does not enable local-to-cloud import, automatic sync, merge, protected routes, account pages, Edge Functions, or AI proxying.
+Signing in does not enable local-to-cloud import, automatic sync, merge, protected routes, account pages, image Storage, or image ownership migration.
+Current legacy text AI calls still go directly from the frontend to the provider through `aiMessageService`; this is the primary Secure AI Foundation migration target.
+Current legacy image generation still calls Pollinations directly through `imageGenerationService`; it should migrate after the secure text AI path and after image ownership/storage decisions are explicit.
 
 ---
 
@@ -167,19 +181,22 @@ Signing in does not enable local-to-cloud import, automatic sync, merge, protect
 
 The current priority is:
 
-→ Build toward fresh authenticated cloud project persistence while preserving local-only anonymous/unconfigured usage.
+→ Establish a secure AI proxy foundation while preserving the existing cloud persistence and local-first baselines.
 
-The current repository migration strategy is documented in:
+The secure AI direction is documented in:
+- docs/architecture/secure-ai-foundation.md
+
+The current repository migration strategy remains documented in:
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/persistence-context.md
 
-Repository migration has started for the top-level project list and the active project's `project_data` blob. Before future implementation, re-check:
-- How should `projectRepository` load and save authenticated cloud projects?
-- How should authenticated identity be threaded into persistence?
-- How should anonymous/unconfigured local-only behavior stay intact?
-- How should cloud project ownership and RLS be enforced?
-- How can the project bootstrap avoid writing local defaults into cloud?
-- How can active project data source tracking avoid local/cloud pollution?
+Before future Secure AI implementation, re-check:
+- How should the frontend AI client avoid provider-specific payloads?
+- Which text AI capability should migrate first?
+- How should Supabase Auth and project/document ownership be validated?
+- How should anonymous or Supabase-unconfigured AI behavior work after direct provider calls are removed?
+- What minimal request, error, timeout, logging, and usage controls are needed for MVP?
+- How can text AI migration avoid changing editor, prompt, or persistence behavior?
 
 ---
 
@@ -211,9 +228,32 @@ Future directions:
 - normalized cloud persistence beyond the `project_data` blob
 - projectData split migration
 - documentRepository, documentMessageRepository, productionTaskRepository, canvas/flow repository, then assets/storage
-- secure AI proxying
-- Edge Functions
 - collaboration-ready foundations
+
+---
+
+## Secure AI Strategy
+
+Secure AI migration is now in scope.
+
+Current direction:
+- frontend AI calls should move toward a product-level AI client
+- the AI client should call a secure AI proxy instead of provider APIs
+- Supabase Edge Functions are the recommended MVP proxy backend unless implementation findings prove otherwise
+- provider adapters should live behind the secure proxy
+- provider secrets must never be exposed to the frontend
+- frontend code must not add new direct AI provider calls after this epic implementation begins
+
+Migration order:
+1. document and align the secure AI boundary
+2. define the minimal frontend AI client contract
+3. migrate text AI through the secure proxy first
+4. migrate document chat before broader guide/benchmarking text surfaces when possible
+5. defer image generation migration until image ownership, Storage, cleanup, and HTML reference handling are explicitly designed
+
+Abstraction rule:
+- do not overbuild multi-provider abstractions before the first secure provider path works
+- add provider abstraction only where it removes real provider leakage or enables the first secure path
 
 ---
 
@@ -266,16 +306,20 @@ Current:
 8. localStorage remains active for anonymous/unconfigured users and internal project data
 9. authenticated users use Supabase for top-level project list persistence
 10. authenticated active project content uses the `project_data` JSONB blob
+11. Secure AI Foundation is planning the first secure AI proxy path
 
 Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
+Secure AI planning is captured in:
+- docs/architecture/secure-ai-foundation.md
 
 Future:
-11. projectData split planning
-12. normalized document/task/canvas/chat persistence after product needs justify it
-13. Supabase Storage and asset metadata after image ownership, cleanup, and references are designed
-14. Edge Functions / secure AI proxy after cloud persistence is stable
-15. optional realtime
+12. text AI execution through Supabase Edge Functions
+13. projectData split planning
+14. normalized document/task/canvas/chat persistence after product needs justify it
+15. Supabase Storage and asset metadata after image ownership, cleanup, and references are designed
+16. image generation through secure proxy after Storage/asset ownership is designed
+17. optional realtime
 
 ---
 
@@ -366,10 +410,14 @@ Implemented Supabase foundations:
 - nullable client boundary
 - optional environment configuration
 
+Planned in Secure AI Foundation:
+- Supabase Edge Functions as the recommended MVP secure AI proxy
+- server-side provider adapters for AI providers
+- frontend AI client boundary
+
 Planned later:
 - normalized Postgres-backed persistence beyond `projects` and `project_data`
 - Supabase Storage
-- Edge Functions
 - Realtime
 - React Router
 - TanStack Query
@@ -408,13 +456,15 @@ When implementing:
 - Do not implement local-to-cloud import unless explicitly reintroduced later
 - Do not imply signing in enables sync, import, merge, or cloud persistence beyond the top-level project list and active project data blob
 - Do not introduce merge or conflict resolution for this phase
-- Do not implement Edge Functions or AI proxying yet
+- Do not expose provider secrets to frontend code, `VITE_*` variables, logs, docs, or examples
+- Do not add new direct frontend calls to AI providers
+- Do not migrate image generation before text AI unless explicitly requested
 - Do not implement Supabase Storage or asset tables yet
 - Do not add unused future tables to active migrations
 - Do not introduce global state
 - Do not extract hooks prematurely
 - Do not overengineer abstractions
-- Do not create framework architectures
+- Do not create broad multi-provider framework architectures before the first secure provider path works
 
 ---
 
