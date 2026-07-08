@@ -18,11 +18,11 @@ The context exists to keep anonymous/unconfigured local behavior explicit while 
 
 ## Core Rule
 
-Current runtime behavior has not changed: login does not yet enable cloud persistence.
+Current runtime behavior has changed for one boundary: when Supabase is configured and the user is authenticated, the top-level project list is cloud-backed.
 
-During the Cloud Product Foundation phase, the planned cloud path is a fresh authenticated cloud workspace. Existing local projects do not need to be imported, merged, or preserved as cloud data.
+During the Cloud Product Foundation phase, the cloud path is a fresh authenticated cloud workspace for migrated repositories. Existing local projects do not need to be imported, merged, or preserved as cloud data.
 
-The future switch to cloud persistence should be explicit in implementation and UX, but it should not depend on local-to-cloud import.
+Project contents remain local-only: documents, production tasks, canvas data, document chats, settings, and assets are not migrated yet.
 
 ## States
 
@@ -41,7 +41,7 @@ Used when the app is anonymous or Supabase is unconfigured.
 Used when Supabase is configured, the user is authenticated, and the runtime has intentionally enabled cloud-backed repositories for the authenticated workspace.
 
 - Auth status: authenticated
-- Authoritative source: Supabase for migrated repositories
+- Authoritative source: Supabase for migrated repositories; currently the top-level project list
 - Domain cloud reads allowed: yes
 - Domain cloud writes allowed: yes, only for repositories that have been intentionally migrated
 - Expected UI behavior: indicate authenticated cloud workspace; avoid implying automatic sync with localStorage
@@ -88,24 +88,21 @@ The UI can use `PersistenceContext` to:
 
 - indicate whether the active workspace is local or cloud-backed
 - keep local workspace behavior for anonymous or unconfigured usage
-- move authenticated users into a fresh cloud workspace once cloud project persistence exists
+- move authenticated users into a fresh cloud project-list workspace
 - return to local behavior after logout without mutating local data
-
-Until cloud persistence is implemented, the UI should not present authentication alone as cloud persistence.
+- avoid implying that internal project data is cloud-backed before those repositories are migrated
 
 ## Transitions
 
 ### Login
 
-Current runtime: login does not change repository behavior.
-
-Planned Cloud Product Foundation behavior: login may resolve to `cloud` only after authenticated cloud project persistence is intentionally implemented.
+Current runtime: login resolves to `cloud` for the top-level project list when Supabase is configured and the user is authenticated.
 
 ### Cloud Workspace Activation
 
 `local` may become `cloud` for an authenticated user when the app has a configured Supabase client and the cloud-backed repository path is active.
 
-Supabase becomes authoritative only for repositories that have been intentionally migrated. In this phase, the first target is `projectRepository`.
+Supabase becomes authoritative only for repositories that have been intentionally migrated. In this phase, the active target is the top-level project list; `projectDataRepository` remains local-only.
 
 ### Logout
 

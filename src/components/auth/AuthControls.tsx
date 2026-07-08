@@ -51,7 +51,7 @@ const linkButtonStyle: CSSProperties = {
   textDecoration: "underline",
 };
 
-const localDataCopy = "Local data stays on this device. Sign in does not enable cloud sync yet.";
+const localDataCopy = "Project lists are cloud-backed. Project contents stay local-only.";
 
 export function AuthControls({ authSession, setAuthSession }: AuthControlsProps) {
   const [mode, setMode] = useState<AuthMode>("sign-in");

@@ -10,7 +10,7 @@ Update after the Supabase Authentication Pass:
 - optional Supabase authentication now exists behind a nullable client boundary
 - missing Supabase environment variables keep the app in local-only mode
 - login and logout do not alter local projects, project data, or settings
-- localStorage remains the active runtime persistence
+- at that point, localStorage remained the active runtime persistence
 - authenticated user identity is only a foundation for future cloud persistence
 - cloud sync, import, merge, sign-up, and account management remain future phases
 
@@ -19,8 +19,9 @@ Update for the Cloud Product Foundation phase:
 - existing local projects do not need to be migrated to cloud for this phase
 - testers are expected to start with a fresh authenticated cloud workspace
 - local-to-cloud import, coexistence, merge strategies, conflict resolution, and automatic sync are out of scope unless explicitly reintroduced later
-- `projectRepository` remains the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
-- the secure `projects` migration prepares cloud persistence, but runtime persistence remains localStorage until the repository implementation step
+- `projectRepository` is the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
+- the secure `projects` migration and runtime repository wiring now support cloud-backed project lists for authenticated users
+- `projectDataRepository`, documents, tasks, canvas data, chats, settings, assets, Edge Functions, and AI proxying remain future work
 
 ## Purpose
 
@@ -38,11 +39,11 @@ The current product behavior should be preserved during this pass.
 
 ## Current Persistence Boundaries
 
-Current persistence is intentionally thin and synchronous.
+Current persistence is intentionally thin. Only the top-level authenticated project list has moved to Supabase.
 
 | Boundary | File | Current owner | Backend | localStorage key |
 | --- | --- | --- | --- | --- |
-| Projects | `src/repositories/projectRepository.ts` | `Project[]` | localStorage | `gdt_projects` |
+| Projects | `src/repositories/projectRepository.ts`, `src/repositories/supabaseProjectRepository.ts` | `Project[]` | Supabase for authenticated users; localStorage for anonymous/unconfigured users | `gdt_projects` for local mode |
 | Project data | `src/repositories/projectDataRepository.ts` | `ProjectData` | localStorage | `gdt_pdata` |
 | Settings | `src/repositories/settingsRepository.ts` | `lang`, `theme` | localStorage | `gdt_lang`, `gdt_theme` |
 | Storage helper | `src/services/localStorage.ts` | JSON get/set wrapper | localStorage | defined in `LS_KEYS` |
@@ -62,19 +63,18 @@ Editor session state such as `activeDoc`, `editContent`, `hasUnsaved`, view sele
 
 ## Async Repository Readiness
 
-`projectRepository` has a preparatory async contract and a localStorage-backed adapter.
+`projectRepository` has an async localStorage-backed adapter, and `supabaseProjectRepository` provides explicit cloud operations for authenticated project lists.
 `settingsRepository` has a preparatory async contract and a localStorage-backed adapter.
 
 `src/services/bootstrap/projectBootstrapService.ts` exists as a future bootstrap boundary.
 Its `loadInitialProjects(fallback)` function delegates to `localProjectRepository.loadProjects({ fallback })`.
-It is not used by runtime yet.
-`GameDesignTool.tsx` still uses the current synchronous project initialization path, preserving behavior while preparing a future async bootstrap step.
+`GameDesignTool.tsx` uses it when resolving local mode after auth state changes.
 
 `projectDataRepository` intentionally remains synchronous and blob-based for now.
 It should be split into narrower future repositories before async conversion.
 
-No call sites have been migrated to async runtime usage yet.
-localStorage remains the active backing implementation.
+Only project list call sites have been migrated to async cloud-aware runtime usage.
+localStorage remains the active backing implementation for anonymous/unconfigured project lists and all internal project data.
 
 ## Target Supabase Model
 

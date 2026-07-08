@@ -147,6 +147,10 @@ const GUIDED_VIEWS: ViewKey[]=[
   'mda-guided','double-a-guided','fourkeys-guided','colors-guided','octalysis-guided',
   'pens-guided','tetrad-guided','ludonarrative-guided','reedsy-wb-guided','unity-ld-guided',
 ];
+const PROJECT_DEPENDENT_VIEWS: ViewKey[]=[
+  'project','module','document','brainstorming','production','flow-builder',
+  ...GUIDED_VIEWS,
+];
 
 // ── Fallback global para erros antes do React montar ─────────────────────────
 if(typeof window !== 'undefined'){
@@ -5334,7 +5338,7 @@ function GDDHubInner(){
     activeCloudUserIdRef.current=activeCloudUserId;
   },[projectPersistenceMode,activeCloudUserId]);
   useEffect(()=>{
-    if(!project&&GUIDED_VIEWS.includes(view)){
+    if(!project&&PROJECT_DEPENDENT_VIEWS.includes(view)){
       // Intentional navigation guard when the selected project is cleared.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setView('dashboard');
@@ -5737,6 +5741,13 @@ function GDDHubInner(){
     </div>
   );
 
+  if(!project&&PROJECT_DEPENDENT_VIEWS.includes(view))return(
+    <div style={{...S.app,display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:16}}>
+      <div style={{fontSize:40}}>🔄</div>
+      <div style={{color:'var(--gdd-muted)',fontSize:14}}>Redirecionando…</div>
+    </div>
+  );
+
   if(view==='brainstorming')return(
     !project?null:
     <CanvasBoard key={project.id} project={project} pData={pData} setPData={setPData} onBack={()=>setView('project')}/>
@@ -5746,8 +5757,6 @@ function GDDHubInner(){
     !project?null:
     <KanbanBoard project={project} pData={pData} setPData={setPData} onBack={()=>setView('project')}/>
   );
-
-  if(!project&&GUIDED_VIEWS.includes(view))return null;
 
   if(view==='mda-guided')return(
     <MDAGuide project={project} pData={pData} setPData={setPData}

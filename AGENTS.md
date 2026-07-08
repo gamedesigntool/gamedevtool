@@ -71,10 +71,10 @@ Completed Production Readiness Pass:
 - README updated from the default Vite template to the current project state
 
 Current goals:
-- preserve the local-first production-ready baseline until cloud persistence implementation starts
+- preserve the local-first production-ready baseline for anonymous and Supabase-unconfigured usage
 - keep README and agent guidance aligned with real runtime behavior
-- introduce fresh authenticated cloud project persistence incrementally
-- make `projectRepository` the first cloud persistence target
+- keep fresh authenticated cloud project list persistence stable
+- keep `projectRepository` as the first cloud persistence target
 - preserve local-only behavior for anonymous and Supabase-unconfigured usage
 - keep validation commands passing before handoff
 
@@ -111,7 +111,7 @@ These documents must be consulted before proposing architectural changes.
 
 `docs/architecture/local-to-cloud-import-service.md` is historical planning from an earlier assumption. It is not active or canonical for the Cloud Product Foundation phase unless local project import is explicitly reintroduced later.
 
-Repository migration documents remain canonical planning references. They do not mean runtime cloud persistence or repository migration has started.
+Repository migration documents remain canonical planning references. Runtime cloud persistence has started only for the authenticated top-level project list.
 
 ---
 
@@ -148,9 +148,11 @@ Supabase foundations already implemented:
 - optional authentication service and minimum UI
 - login, signup, password reset, logout, and signed-in user email display
 
-Persistence currently remains localStorage-backed.
-Supabase is not active runtime persistence yet.
-Signing in does not enable cloud sync, cloud persistence, import, merge, protected routes, or account pages.
+Persistence is split by context and repository boundary.
+Authenticated users use Supabase for the top-level project list when Supabase is configured.
+Anonymous and Supabase-unconfigured users remain localStorage-backed.
+Project data, documents, tasks, canvas, chats, settings, and assets remain local-only.
+Signing in does not enable local-to-cloud import, automatic sync, merge, protected routes, account pages, Edge Functions, or AI proxying.
 
 ---
 
@@ -164,7 +166,7 @@ The current repository migration strategy is documented in:
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/persistence-context.md
 
-Repository migration has not started in runtime code. Before future implementation, re-check:
+Repository migration has started only for the top-level project list. Before future implementation, re-check:
 - How should `projectRepository` load and save authenticated cloud projects?
 - How should authenticated identity be threaded into persistence?
 - How should anonymous/unconfigured local-only behavior stay intact?
@@ -175,7 +177,7 @@ Repository migration has not started in runtime code. Before future implementati
 
 ## Repository Migration Focus
 
-Repository migration remains future work.
+Repository migration beyond the top-level project list remains future work.
 
 Planning areas:
 - projectRepository cloud persistence planning
@@ -184,13 +186,13 @@ Planning areas:
 - implementation sequencing
 
 Current planning decisions:
-- projectRepository is the first planned migration target
+- projectRepository is the first active migration target
 - projectDataRepository must not be migrated first
 - anonymous and Supabase-unconfigured local-first behavior remains preserved
 - existing local projects do not need to be migrated in this phase
 - local-to-cloud import is not required in this phase
-- no runtime cloud persistence exists yet
-- no repository has been migrated to Supabase yet
+- runtime cloud persistence exists only for the authenticated top-level project list
+- projectDataRepository has not been migrated to Supabase
 - PersistenceContext is documented in docs/architecture/persistence-context.md
 - LocalToCloudImportService is historical and not active for this phase
 
@@ -249,18 +251,17 @@ Completed:
 7. production readiness cleanup
 
 Current:
-8. localStorage remains the active runtime persistence
-9. repository migration implementation has not started
+8. localStorage remains active for anonymous/unconfigured users and internal project data
+9. authenticated users use Supabase for top-level project list persistence
 
 Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
 
 Future:
-10. projectRepository cloud persistence for authenticated users
-11. projectData split planning
-12. document/project data cloud persistence
-13. Edge Functions / secure AI proxy after cloud persistence is stable
-14. optional realtime
+10. projectData split planning
+11. document/project data cloud persistence
+12. Edge Functions / secure AI proxy after cloud persistence is stable
+13. optional realtime
 
 ---
 
@@ -391,7 +392,7 @@ When implementing:
 - Do not replace all repositories at once
 - Do not migrate all data at once
 - Do not implement local-to-cloud import unless explicitly reintroduced later
-- Do not imply signing in enables sync or cloud persistence before runtime implementation exists
+- Do not imply signing in enables sync, import, merge, or cloud persistence beyond the top-level project list
 - Do not introduce merge or conflict resolution for this phase
 - Do not implement Edge Functions or AI proxying yet
 - Do not introduce global state

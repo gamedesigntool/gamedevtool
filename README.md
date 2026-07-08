@@ -7,19 +7,19 @@ Game Design Tool is a guided game design platform for turning early ideas into s
 - React
 - TypeScript
 - Vite
-- localStorage persistence
-- Optional Supabase foundation for authentication
+- localStorage-backed project data persistence
+- Optional Supabase Auth and cloud-backed project list persistence
 - Cloudflare Pages deployment target
 
 ## Current Status
 
-The app is currently local-first. Projects, project data, documents, canvas data, production tasks, settings, and related workspace state are persisted in the browser through localStorage.
+The app is local-first for internal project data. Documents, canvas data, production tasks, settings, chats, and related workspace state are persisted in the browser through localStorage.
 
-Supabase is present only as an optional foundation for authentication. When Supabase environment variables are missing, the app remains local-only. When they are present, the app can show minimal email/password authentication UI.
+Supabase is optional. When Supabase environment variables are missing, the app remains local-only. When they are present, authenticated users use a fresh cloud-backed project list, while anonymous users remain localStorage-backed.
 
-Signing in does not enable cloud persistence, cloud sync, automatic import, merge behavior, protected routes, or account pages. Local data remains localStorage-backed.
+Signing in enables cloud persistence only for the top-level project list. Project contents remain local-only, and there is no automatic import, sync, merge behavior, protected routes, or account pages.
 
-The current Cloud Product Foundation direction is fresh authenticated cloud project persistence. Existing local projects do not need to be imported or merged for this phase.
+Existing local projects are not imported or merged into cloud workspaces for this phase.
 
 ## What Exists Today
 
@@ -34,15 +34,15 @@ The current Cloud Product Foundation direction is fresh authenticated cloud proj
 - PDF export for selected GDD modules and documents.
 - Theme and language preferences saved locally.
 - Optional Supabase Auth session foundation when configured.
+- Cloud-backed project list persistence for authenticated users when Supabase is configured.
 
 ## What Does Not Exist Yet
 
-- Runtime cloud persistence.
-- Authenticated cloud project persistence.
+- Cloud persistence for internal project data, documents, tasks, canvas, chats, or settings.
 - Automatic sync between localStorage and Supabase.
 - Local-to-cloud import UX, which is out of scope for this phase.
 - Local/cloud merge or conflict resolution.
-- Supabase-backed repositories for project or document data.
+- Supabase-backed repositories for document or project detail data.
 - Supabase Storage-backed assets.
 - Edge Functions or a secure AI proxy.
 - Protected routes, account pages, or cloud workspace switching.
@@ -94,4 +94,4 @@ git diff --check
 
 ## Architecture Notes
 
-Persistence is intentionally still localStorage-backed. Supabase Auth exists to prepare future ownership-aware cloud persistence, but repository migration and cloud-backed project data remain future work.
+The top-level project list is cloud-backed for authenticated Supabase users. Internal project data remains localStorage-backed until narrower document, task, canvas, chat, and asset repositories are designed and migrated.

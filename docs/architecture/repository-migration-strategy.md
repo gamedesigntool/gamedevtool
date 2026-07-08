@@ -6,11 +6,11 @@ This document records the planning decision for incrementally introducing Supaba
 
 The Cloud Product Foundation goal is to support fresh authenticated cloud workspaces where users can create projects and reopen them from another browser or device. Existing local projects do not need to be imported or migrated in this phase.
 
-This document is architectural planning only. It does not implement runtime cloud persistence, sync, merge, realtime collaboration, autosave, global state, or repository behavior changes.
+This document records the planning direction and current partial implementation. Runtime cloud persistence is active only for the top-level authenticated project list. It does not implement project data cloud persistence, sync, merge, realtime collaboration, autosave, global state, or broad repository replacement.
 
 ## Current State
 
-Persistence is still localStorage-backed.
+Persistence is split by authenticated context and repository boundary.
 
 Supabase foundations already exist:
 
@@ -20,10 +20,12 @@ Supabase foundations already exist:
 - optional authentication
 - auth session reading and observation
 - minimal login/logout UI
+- secure `projects` table with RLS
+- Supabase-backed project list operations for authenticated users
 
-There is no active runtime cloud persistence yet.
+Authenticated users use Supabase for the top-level project list. Anonymous users and Supabase-unconfigured environments remain localStorage-backed.
 
-Login and logout do not currently alter local projects, project data, or settings. Authenticated identity exists only as a foundation for future cloud project persistence.
+Login and logout do not import, merge, delete, or upload local project data. `projectDataRepository`, documents, tasks, canvas data, chats, settings, and assets remain local-only.
 
 ## Repository Inventory
 
@@ -55,7 +57,7 @@ Migrating this blob directly would preserve the wrong boundary and increase the 
 
 ### Anonymous / Local Mode
 
-Anonymous users remain fully local-first.
+Anonymous and Supabase-unconfigured users remain fully local-first.
 
 Authoritative source:
 
@@ -67,13 +69,14 @@ No cloud reads or writes should occur.
 
 ### Authenticated Cloud Mode
 
-A signed-in user should eventually use a fresh cloud workspace for migrated repositories.
+A signed-in user uses a fresh cloud workspace for migrated repositories.
 
 Authoritative source:
 
-- Supabase for migrated repositories
+- Supabase for the migrated top-level project list
 - localStorage remains the fallback only for anonymous or Supabase-unconfigured usage
 - cloud project rows belong to the authenticated user
+- localStorage remains authoritative for internal project data until those repositories are migrated
 
 Existing local projects are not imported into the cloud workspace during this phase.
 
@@ -152,8 +155,7 @@ Logout must not mutate local data. It should only remove access to the authentic
 
 This phase must not implement:
 
-- runtime cloud persistence
-- Supabase reads or writes from repositories
+- cloud persistence beyond the top-level project list
 - automatic sync
 - local-to-cloud import
 - local/cloud workspace coexistence for the same user
