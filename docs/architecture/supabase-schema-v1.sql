@@ -5,7 +5,9 @@
 --
 -- Cloud Product Foundation update:
 -- public.projects is the first runtime cloud persistence foundation.
--- The real migration enables RLS for projects before repository runtime wiring.
+-- public.project_data is the minimal blob foundation for internal project
+-- contents. Runtime wiring remains separate; normalized tables below are
+-- still the preferred future target once narrower repositories exist.
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -75,6 +77,27 @@ on public.projects
 for delete
 to authenticated
 using (owner_id = auth.uid());
+
+create table public.project_data (
+  project_id uuid primary key references public.projects(id) on delete cascade,
+  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb check (jsonb_typeof(data) = 'object'),
+  schema_version integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.project_data is
+  'Minimal ProjectData JSONB blob for fresh authenticated cloud projects. This is a bridge for multi-device persistence, not the final normalized document/task/canvas model.';
+
+create trigger set_project_data_updated_at
+before update on public.project_data
+for each row
+execute function public.set_updated_at();
+
+alter table public.project_data enable row level security;
+
+-- Project data policies validate both the row owner and parent project owner.
 
 create table public.documents (
   id uuid primary key default gen_random_uuid(),
@@ -194,8 +217,10 @@ comment on table public.user_settings is
 -- Future RLS policy placeholders:
 -- 1. Enable row level security on all remaining application tables before production use.
 -- 2. profiles: users can select/update only their own profile row.
--- 3. documents, document_messages, production_tasks, canvas_boards:
+-- 3. project_data: users can select/insert/update/delete rows only when both
+--    project_data.owner_id and the parent projects.owner_id match auth.uid().
+-- 4. documents, document_messages, production_tasks, canvas_boards:
 --    access should be derived through the parent project owner_id.
--- 4. assets: users can access assets where owner_id = auth.uid()
+-- 5. assets: users can access assets where owner_id = auth.uid()
 --    and the related project is also owned by auth.uid().
--- 5. user_settings: users can select/update only their own settings row.
+-- 6. user_settings: users can select/update only their own settings row.

@@ -22,7 +22,7 @@ Current runtime behavior has changed for one boundary: when Supabase is configur
 
 During the Cloud Product Foundation phase, the cloud path is a fresh authenticated cloud workspace for migrated repositories. Existing local projects do not need to be imported, merged, or preserved as cloud data.
 
-Project contents remain local-only: documents, production tasks, canvas data, document chats, settings, and assets are not migrated yet.
+Project contents remain local-only at runtime: documents, production tasks, canvas data, document chats, settings, and assets are not wired to cloud yet. A `project_data` blob table and isolated repository may exist as a foundation, but Supabase becomes authoritative for project contents only after explicit runtime wiring.
 
 ## States
 
@@ -102,7 +102,7 @@ Current runtime: login resolves to `cloud` for the top-level project list when S
 
 `local` may become `cloud` for an authenticated user when the app has a configured Supabase client and the cloud-backed repository path is active.
 
-Supabase becomes authoritative only for repositories that have been intentionally migrated. In this phase, the active target is the top-level project list; `projectDataRepository` remains local-only.
+Supabase becomes authoritative only for repositories that have been intentionally migrated and wired into runtime. In this phase, the active runtime target is the top-level project list; `projectDataRepository` remains local-only even if an isolated `supabaseProjectDataRepository` foundation exists.
 
 ### Logout
 

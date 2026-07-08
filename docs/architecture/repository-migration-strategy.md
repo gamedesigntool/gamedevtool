@@ -22,10 +22,12 @@ Supabase foundations already exist:
 - minimal login/logout UI
 - secure `projects` table with RLS
 - Supabase-backed project list operations for authenticated users
+- secure `project_data` blob table with RLS
+- isolated `supabaseProjectDataRepository` for future runtime wiring
 
 Authenticated users use Supabase for the top-level project list. Anonymous users and Supabase-unconfigured environments remain localStorage-backed.
 
-Login and logout do not import, merge, delete, or upload local project data. `projectDataRepository`, documents, tasks, canvas data, chats, settings, and assets remain local-only.
+Login and logout do not import, merge, delete, or upload local project data. Runtime `projectDataRepository`, documents, tasks, canvas data, chats, settings, and assets remain local-only until the isolated blob repository is explicitly wired.
 
 ## Repository Inventory
 
@@ -33,7 +35,7 @@ Login and logout do not import, merge, delete, or upload local project data. `pr
 | --- | --- | --- | --- | --- |
 | `settingsRepository` | Stores user interface preferences such as language and theme. | Low. Useful later for account-level preferences, but not central to project ownership. | Low. Small data shape and low product impact. | Keep local for now. Consider cloud settings only after project persistence is stable. |
 | `projectRepository` | Stores the top-level `Project[]`: project identity, name, genre, platform, color, emoji, and progress. | High. Establishes the project ownership boundary required for future cloud persistence. | Medium. Runtime bootstrap and save behavior must avoid mixing local defaults with authenticated cloud rows. | First cloud persistence target. |
-| `projectDataRepository` | Stores the `ProjectData` blob: documents, document messages, production tasks, canvas data, flow data, and embedded image references. | Very high, because it contains the most valuable user content. | Very high. It mixes multiple product areas and is tightly coupled to editor, export, AI message, guide, canvas, and Kanban flows. | Do not migrate first. Keep as local snapshot until narrower boundaries are designed. |
+| `projectDataRepository` / `supabaseProjectDataRepository` | Stores the `ProjectData` blob locally and, for the new cloud foundation, one single-project JSONB blob per project. | Very high, because it contains the most valuable user content. | Very high. It mixes multiple product areas and is tightly coupled to editor, export, AI message, guide, canvas, and Kanban flows. | Keep runtime local for now. Use the isolated blob repository only as a minimal bridge before later normalized boundaries. |
 
 ## First Migration Target
 
@@ -41,7 +43,7 @@ Login and logout do not import, merge, delete, or upload local project data. `pr
 
 It is better than `settingsRepository` because projects define the core ownership boundary. Cloud persistence needs a user-owned project row before documents, tasks, canvas boards, assets, or messages can safely belong to anything. Migrating settings first would be technically simple but strategically shallow: it would not validate the most important cloud model.
 
-`projectDataRepository` must not be first because it is currently a synchronous blob repository. It contains several distinct persistence concerns in one nested object:
+`projectDataRepository` must not be normalized first because it is currently a synchronous blob repository. It contains several distinct persistence concerns in one nested object:
 
 - saved documents
 - document HTML content
@@ -51,7 +53,7 @@ It is better than `settingsRepository` because projects define the core ownershi
 - flow builder data
 - embedded image references or base64 image data
 
-Migrating this blob directly would preserve the wrong boundary and increase the risk of data loss, stale editor state, accidental overwrites, and future complexity.
+The current cloud bridge stores one single-project blob only to unlock fresh authenticated multi-device persistence. This is not local import, sync, collaboration, or the final document/task/canvas model.
 
 ## Fresh Cloud Workspace Model
 
@@ -74,6 +76,7 @@ A signed-in user uses a fresh cloud workspace for migrated repositories.
 Authoritative source:
 
 - Supabase for the migrated top-level project list
+- Supabase `project_data` only after explicit runtime wiring
 - localStorage remains the fallback only for anonymous or Supabase-unconfigured usage
 - cloud project rows belong to the authenticated user
 - localStorage remains authoritative for internal project data until those repositories are migrated
@@ -132,8 +135,10 @@ Logout must not mutate local data. It should only remove access to the authentic
    - logout from cloud workspace
    - login as a different user
    - local defaults are not written into cloud unintentionally
-7. Only later split `projectDataRepository` into narrower boundaries.
-8. Migrate project data areas incrementally after project identity is stable:
+7. Add the isolated `project_data` blob foundation.
+8. Wire project data runtime only after source tracking and stale async guards are in place.
+9. Only later split `projectDataRepository` into narrower boundaries.
+10. Migrate project data areas incrementally after project identity is stable:
    - documents
    - document messages
    - production tasks
@@ -148,7 +153,7 @@ Logout must not mutate local data. It should only remove access to the authentic
 | Cloud/local confusion | Surface the active persistence context once cloud writes exist. |
 | Cross-user data exposure | Enable RLS and scope all cloud project reads/writes by authenticated owner id. |
 | Over-broad cloud save semantics | Prefer explicit create/update/delete repository operations before treating cloud persistence as "save the whole list". |
-| `projectDataRepository` blob complexity | Do not migrate the blob directly. Split into narrower future repositories first. |
+| `projectDataRepository` blob complexity | Keep the blob bridge minimal and one-project-at-a-time. Split into narrower future repositories after basic cloud persistence is stable. |
 | Editor unsaved state | Never migrate `activeDoc`, `editContent`, `hasUnsaved`, DOM draft state, modal state, loading state, or view state. Only saved document data should be considered for future migration. |
 
 ## Non-Goals

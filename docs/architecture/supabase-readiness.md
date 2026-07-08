@@ -21,7 +21,8 @@ Update for the Cloud Product Foundation phase:
 - local-to-cloud import, coexistence, merge strategies, conflict resolution, and automatic sync are out of scope unless explicitly reintroduced later
 - `projectRepository` is the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
 - the secure `projects` migration and runtime repository wiring now support cloud-backed project lists for authenticated users
-- `projectDataRepository`, documents, tasks, canvas data, chats, settings, assets, Edge Functions, and AI proxying remain future work
+- a secure `project_data` blob table and isolated `supabaseProjectDataRepository` now exist as a foundation, but runtime project data remains localStorage-backed until explicitly wired
+- normalized documents, tasks, canvas data, chats, settings, assets, Edge Functions, and AI proxying remain future work
 
 ## Purpose
 
@@ -44,7 +45,7 @@ Current persistence is intentionally thin. Only the top-level authenticated proj
 | Boundary | File | Current owner | Backend | localStorage key |
 | --- | --- | --- | --- | --- |
 | Projects | `src/repositories/projectRepository.ts`, `src/repositories/supabaseProjectRepository.ts` | `Project[]` | Supabase for authenticated users; localStorage for anonymous/unconfigured users | `gdt_projects` for local mode |
-| Project data | `src/repositories/projectDataRepository.ts` | `ProjectData` | localStorage | `gdt_pdata` |
+| Project data | `src/repositories/projectDataRepository.ts`, `src/repositories/supabaseProjectDataRepository.ts` | `ProjectData` / single-project data blob | localStorage at runtime; Supabase blob foundation not yet wired | `gdt_pdata` |
 | Settings | `src/repositories/settingsRepository.ts` | `lang`, `theme` | localStorage | `gdt_lang`, `gdt_theme` |
 | Storage helper | `src/services/localStorage.ts` | JSON get/set wrapper | localStorage | defined in `LS_KEYS` |
 
@@ -70,8 +71,8 @@ Editor session state such as `activeDoc`, `editContent`, `hasUnsaved`, view sele
 Its `loadInitialProjects(fallback)` function delegates to `localProjectRepository.loadProjects({ fallback })`.
 `GameDesignTool.tsx` uses it when resolving local mode after auth state changes.
 
-`projectDataRepository` intentionally remains synchronous and blob-based for now.
-It should be split into narrower future repositories before async conversion.
+`projectDataRepository` intentionally remains synchronous and blob-based for runtime usage right now.
+`supabaseProjectDataRepository` is isolated and explicit; it stores one project data blob per cloud project and is not wired into `GameDesignTool.tsx` yet.
 
 Only project list call sites have been migrated to async cloud-aware runtime usage.
 localStorage remains the active backing implementation for anonymous/unconfigured project lists and all internal project data.
@@ -84,6 +85,7 @@ Proposed v1 Postgres entities:
 
 - `profiles`
 - `projects`
+- `project_data`
 - `documents`
 - `document_messages`
 - `production_tasks`
@@ -100,6 +102,7 @@ Potential v1 or later entity:
 Postgres should store:
 
 - projects and project metadata
+- the temporary `project_data.data` JSONB blob for fresh authenticated multi-device persistence
 - document metadata and saved HTML content
 - document messages
 - production tasks
@@ -130,6 +133,7 @@ Storage should not be used for:
 JSONB is acceptable in v1 for shapes that are highly UI-tool-specific and not yet worth querying relationally:
 
 - `documents.flow_data`
+- `project_data.data`, as a short-term bridge before narrower repositories are wired
 - `canvas_boards.elements`
 - `canvas_boards.strokes`
 - `assets.metadata`
@@ -153,6 +157,8 @@ Do not normalize these during the readiness pass:
 `projectDataRepository` is currently a synchronous localStorage snapshot repository.
 It persists the whole `ProjectData` blob under `gdt_pdata`, and it remains the active runtime path for now.
 
+The `project_data` Supabase table stores a single project data blob per cloud project, not the whole `ProjectData` map. It is an intentional bridge for fresh authenticated projects and should not be treated as a local-to-cloud import mechanism.
+
 It should not be converted directly to async yet because:
 
 - the current `useState` initializer cannot become async directly
@@ -172,17 +178,18 @@ Future persistence should split this blob into narrower boundaries:
 Recommended migration order:
 
 1. Keep `projectDataRepository` as the local snapshot repository.
-2. Document the split boundaries before changing runtime behavior.
-3. Define async contracts later, once project identity and bootstrap behavior are clearer.
-4. Migrate documents after project identity and async bootstrapping are stable.
-5. Normalize messages with the first document migration.
-6. Migrate production tasks after documents and messages.
-7. Migrate canvas and flow JSON later.
-8. Migrate Storage-backed assets last.
+2. Add the isolated `project_data` blob foundation for fresh authenticated cloud projects.
+3. Wire runtime project data to the blob only after project-data source tracking and stale async guards are designed.
+4. Split the blob into narrower repositories later, once the cloud project data path is stable.
+5. Migrate documents after project identity and async bootstrapping are stable.
+6. Normalize messages with the first document migration.
+7. Migrate production tasks after documents and messages.
+8. Migrate canvas and flow JSON later.
+9. Migrate Storage-backed assets last.
 
 Non-goals for this pass:
 
-- no async conversion of `projectDataRepository` yet
+- no runtime wiring of `supabaseProjectDataRepository` yet
 - no `GameDesignTool.tsx` changes
 - no editor rewrite
 - no autosave
@@ -325,17 +332,19 @@ Recommended order:
 1. Define the target schema and ownership model.
 2. Introduce async repository contracts while keeping localStorage implementations.
 3. Convert `projectRepository` first because `Project` is small, stable, and defines future ownership.
-4. Treat `settingsRepository` as optional cloud persistence; local settings can remain local until user profiles are introduced.
-5. Split `projectDataRepository` conceptually into narrower contracts before Supabase replacement:
+4. Add a minimal `project_data` blob foundation and isolated repository for one project at a time.
+5. Treat `settingsRepository` as optional cloud persistence; local settings can remain local until user profiles are introduced.
+6. Wire the blob runtime only after source tracking prevents local/cloud pollution.
+7. Split `projectDataRepository` conceptually into narrower contracts after blob persistence is stable:
    - documents
    - document messages
    - production tasks
    - canvas boards
-6. Migrate documents after project identity and async contracts are stable.
-7. Migrate document messages with the first Supabase document migration.
-8. Migrate production tasks after documents.
-9. Migrate canvas and flow data as JSONB after core documents are stable.
-10. Migrate Storage-backed images and assets later, after asset ownership and HTML reference rewriting are designed.
+8. Migrate documents after project identity and async contracts are stable.
+9. Migrate document messages with the first Supabase document migration.
+10. Migrate production tasks after documents.
+11. Migrate canvas and flow data as JSONB after core documents are stable.
+12. Migrate Storage-backed images and assets later, after asset ownership and HTML reference rewriting are designed.
 
 During the Cloud Product Foundation phase, do not design local/cloud coexistence as a requirement.
 
