@@ -21,7 +21,7 @@ Update for the Cloud Product Foundation phase:
 - local-to-cloud import, coexistence, merge strategies, conflict resolution, and automatic sync are out of scope unless explicitly reintroduced later
 - `projectRepository` is the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
 - the secure `projects` migration and runtime repository wiring now support cloud-backed project lists for authenticated users
-- a secure `project_data` blob table and isolated `supabaseProjectDataRepository` now exist as a foundation, but runtime project data remains localStorage-backed until explicitly wired
+- a secure `project_data` blob table and `supabaseProjectDataRepository` now support active-project blob persistence for authenticated cloud projects
 - normalized documents, tasks, canvas data, chats, settings, assets, Edge Functions, and AI proxying remain future work
 
 ## Purpose
@@ -45,7 +45,7 @@ Current persistence is intentionally thin. Only the top-level authenticated proj
 | Boundary | File | Current owner | Backend | localStorage key |
 | --- | --- | --- | --- | --- |
 | Projects | `src/repositories/projectRepository.ts`, `src/repositories/supabaseProjectRepository.ts` | `Project[]` | Supabase for authenticated users; localStorage for anonymous/unconfigured users | `gdt_projects` for local mode |
-| Project data | `src/repositories/projectDataRepository.ts`, `src/repositories/supabaseProjectDataRepository.ts` | `ProjectData` / single-project data blob | localStorage at runtime; Supabase blob foundation not yet wired | `gdt_pdata` |
+| Project data | `src/repositories/projectDataRepository.ts`, `src/repositories/supabaseProjectDataRepository.ts` | `ProjectData` / single-project data blob | Supabase for active authenticated cloud projects; localStorage for anonymous/unconfigured users | `gdt_pdata` only for local mode |
 | Settings | `src/repositories/settingsRepository.ts` | `lang`, `theme` | localStorage | `gdt_lang`, `gdt_theme` |
 | Storage helper | `src/services/localStorage.ts` | JSON get/set wrapper | localStorage | defined in `LS_KEYS` |
 
@@ -71,11 +71,11 @@ Editor session state such as `activeDoc`, `editContent`, `hasUnsaved`, view sele
 Its `loadInitialProjects(fallback)` function delegates to `localProjectRepository.loadProjects({ fallback })`.
 `GameDesignTool.tsx` uses it when resolving local mode after auth state changes.
 
-`projectDataRepository` intentionally remains synchronous and blob-based for runtime usage right now.
-`supabaseProjectDataRepository` is isolated and explicit; it stores one project data blob per cloud project and is not wired into `GameDesignTool.tsx` yet.
+`projectDataRepository` intentionally remains synchronous and blob-based for local runtime usage.
+`supabaseProjectDataRepository` is explicit; it stores one project data blob per cloud project and is wired only for the active authenticated project.
 
-Only project list call sites have been migrated to async cloud-aware runtime usage.
-localStorage remains the active backing implementation for anonymous/unconfigured project lists and all internal project data.
+Project list and active project data call sites have been migrated to async cloud-aware runtime usage.
+localStorage remains the active backing implementation for anonymous/unconfigured project lists and internal project data.
 
 ## Target Supabase Model
 
@@ -155,7 +155,7 @@ Do not normalize these during the readiness pass:
 ## ProjectData Split Boundaries
 
 `projectDataRepository` is currently a synchronous localStorage snapshot repository.
-It persists the whole `ProjectData` blob under `gdt_pdata`, and it remains the active runtime path for now.
+It persists the whole `ProjectData` blob under `gdt_pdata`, and it remains the active runtime path for local mode.
 
 The `project_data` Supabase table stores a single project data blob per cloud project, not the whole `ProjectData` map. It is an intentional bridge for fresh authenticated projects and should not be treated as a local-to-cloud import mechanism.
 
@@ -179,7 +179,7 @@ Recommended migration order:
 
 1. Keep `projectDataRepository` as the local snapshot repository.
 2. Add the isolated `project_data` blob foundation for fresh authenticated cloud projects.
-3. Wire runtime project data to the blob only after project-data source tracking and stale async guards are designed.
+3. Wire runtime project data to the blob with project-data source tracking and stale async guards.
 4. Split the blob into narrower repositories later, once the cloud project data path is stable.
 5. Migrate documents after project identity and async bootstrapping are stable.
 6. Normalize messages with the first document migration.
@@ -189,8 +189,8 @@ Recommended migration order:
 
 Non-goals for this pass:
 
-- no runtime wiring of `supabaseProjectDataRepository` yet
-- no `GameDesignTool.tsx` changes
+- no local-to-cloud import or merge
+- no normalized project data tables
 - no editor rewrite
 - no autosave
 - no Storage migration now
@@ -334,7 +334,7 @@ Recommended order:
 3. Convert `projectRepository` first because `Project` is small, stable, and defines future ownership.
 4. Add a minimal `project_data` blob foundation and isolated repository for one project at a time.
 5. Treat `settingsRepository` as optional cloud persistence; local settings can remain local until user profiles are introduced.
-6. Wire the blob runtime only after source tracking prevents local/cloud pollution.
+6. Keep blob runtime guarded by source tracking to prevent local/cloud pollution.
 7. Split `projectDataRepository` conceptually into narrower contracts after blob persistence is stable:
    - documents
    - document messages

@@ -25,6 +25,7 @@ import { ECHOES_DEFAULT, PDATA_DEFAULT } from "./domain/projectDefaults";
 import { getStoredProjectData, saveStoredProjectData } from "./repositories/projectDataRepository";
 import { getStoredProjects, saveStoredProjects } from "./repositories/projectRepository";
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
+import { supabaseProjectDataRepository, type CloudProjectData } from "./repositories/supabaseProjectDataRepository";
 import { supabaseProjectRepository } from "./repositories/supabaseProjectRepository";
 import { sendAiMessage } from "./services/ai/aiMessageService";
 import { getCurrentAuthSession, observeAuthSession, type AuthSessionSnapshot } from "./services/auth/authSessionService";
@@ -121,6 +122,13 @@ type KanbanProps = {
 type SetProjectData = Dispatch<SetStateAction<ProjectData>>;
 type ProjectPersistenceMode = "local" | "cloud";
 type ProjectListSource = "none" | "local" | "cloud";
+type ProjectDataSource = "none" | "local" | "cloud";
+type CloudProjectDataSaveEntry = {
+  inFlight: boolean;
+  pending: CloudProjectData | null;
+  debounceId: number | null;
+};
+type CloudProjectDataSaveFlush = (projectIdKey: string, entry: CloudProjectDataSaveEntry) => Promise<void>;
 type InsertHtmlRef = { current: ((html: string) => void) | null };
 type EditableDiv = HTMLDivElement & { _init?: boolean };
 type DocEditorToolbarButtonProps = { label: string; title: string; color: string; exec: (cmd: string, val?: string) => void; cmd?: string; active?: boolean; onClick?: () => void };
@@ -151,6 +159,11 @@ const PROJECT_DEPENDENT_VIEWS: ViewKey[]=[
   'project','module','document','brainstorming','production','flow-builder',
   ...GUIDED_VIEWS,
 ];
+const CLOUD_PROJECT_DATA_SAVE_DEBOUNCE_MS=500;
+
+function cloneCloudProjectDataSnapshot(data: CloudProjectData): CloudProjectData {
+  return JSON.parse(JSON.stringify(data ?? {})) as CloudProjectData;
+}
 
 // ── Fallback global para erros antes do React montar ─────────────────────────
 if(typeof window !== 'undefined'){
@@ -5310,6 +5323,10 @@ function GDDHubInner(){
   const [isProjectListLoading,setIsProjectListLoading]=useState(false);
   const [projectListError,setProjectListError]=useState<string | null>(null);
   const [projectListSource,setProjectListSource]=useState<ProjectListSource>("local");
+  const [isProjectDataLoading,setIsProjectDataLoading]=useState(false);
+  const [projectDataError,setProjectDataError]=useState<string | null>(null);
+  const [projectDataSource,setProjectDataSource]=useState<ProjectDataSource>("local");
+  const [cloudProjectDataProjectId,setCloudProjectDataProjectId]=useState<ProjectId | null>(null);
   const [scrolled,setScrolled]=useState(false);
   const [showNew,setShowNew]=useState(false),[showNewDoc,setShowNewDoc]=useState(false),[newDocTitle,setNewDocTitle]=useState('');
   const [form,setForm]=useState({name:'',genre:'',platform:''});
@@ -5323,20 +5340,145 @@ function GDDHubInner(){
   const chatRef=useRef<HTMLDivElement | null>(null),insertRef=useRef<((html: string) => void) | null>(null);
   const projectPersistenceMode: ProjectPersistenceMode=authSession.status==='authenticated'&&supabaseClient?'cloud':'local';
   const activeCloudUserId=authSession.status==='authenticated'?authSession.user.id:null;
+  const activeProjectId=project?.id ?? null;
+  const isActiveProjectInLoadedList=activeProjectId!=null&&projects.some(item=>item.id===activeProjectId);
   const projectPersistenceModeRef=useRef<ProjectPersistenceMode>(projectPersistenceMode);
   const activeCloudUserIdRef=useRef<string | null>(activeCloudUserId);
+  const activeProjectIdRef=useRef<ProjectId | null>(activeProjectId);
   const projectListSourceRef=useRef<ProjectListSource>(projectListSource);
+  const projectDataSourceRef=useRef<ProjectDataSource>(projectDataSource);
+  const cloudProjectDataProjectIdRef=useRef<ProjectId | null>(cloudProjectDataProjectId);
+  const loadedCloudProjectDataProjectIdsRef=useRef<Set<string>>(new Set());
+  const previousCloudProjectDataSnapshotsRef=useRef<Map<string, CloudProjectData | undefined>>(new Map());
+  const cloudProjectDataSaveQueueRef=useRef<Map<string, CloudProjectDataSaveEntry>>(new Map());
+  const flushCloudProjectDataSaveRef=useRef<CloudProjectDataSaveFlush | null>(null);
   const setProjectListSourceState=useCallback((source: ProjectListSource)=>{
     projectListSourceRef.current=source;
     setProjectListSource(source);
   },[]);
+  const setProjectDataSourceState=useCallback((source: ProjectDataSource)=>{
+    projectDataSourceRef.current=source;
+    setProjectDataSource(source);
+  },[]);
+  const clearCloudProjectDataSaveQueue=useCallback((projectId?: ProjectId)=>{
+    const queue=cloudProjectDataSaveQueueRef.current;
+    const projectIds=projectId==null?[...queue.keys()]:[String(projectId)];
+    projectIds.forEach(projectIdKey=>{
+      const entry=queue.get(projectIdKey);
+      if(entry?.debounceId!=null)window.clearTimeout(entry.debounceId);
+      queue.delete(projectIdKey);
+    });
+  },[]);
+  const clearCloudProjectDataTracking=useCallback((projectId?: ProjectId)=>{
+    if(projectId==null){
+      loadedCloudProjectDataProjectIdsRef.current.clear();
+      previousCloudProjectDataSnapshotsRef.current.clear();
+      clearCloudProjectDataSaveQueue();
+      return;
+    }
+
+    const projectIdKey=String(projectId);
+    loadedCloudProjectDataProjectIdsRef.current.delete(projectIdKey);
+    previousCloudProjectDataSnapshotsRef.current.delete(projectIdKey);
+    clearCloudProjectDataSaveQueue(projectId);
+  },[clearCloudProjectDataSaveQueue]);
+  useEffect(()=>{
+    flushCloudProjectDataSaveRef.current=async(projectIdKey: string,entry: CloudProjectDataSaveEntry)=>{
+      if(entry.inFlight||!entry.pending)return;
+
+      const requestMode=projectPersistenceModeRef.current;
+      const requestUserId=activeCloudUserIdRef.current;
+      if(
+        requestMode!=='cloud'||
+        !requestUserId||
+        !loadedCloudProjectDataProjectIdsRef.current.has(projectIdKey)
+      ){
+        cloudProjectDataSaveQueueRef.current.delete(projectIdKey);
+        return;
+      }
+
+      const snapshot=entry.pending;
+      entry.pending=null;
+      entry.inFlight=true;
+
+      try{
+        await supabaseProjectDataRepository.saveProjectData(projectIdKey,snapshot);
+        if(
+          cloudProjectDataSaveQueueRef.current.get(projectIdKey)===entry&&
+          projectPersistenceModeRef.current===requestMode&&
+          activeCloudUserIdRef.current===requestUserId&&
+          loadedCloudProjectDataProjectIdsRef.current.has(projectIdKey)
+        )setProjectDataError(null);
+      }catch(error){
+        console.error("Failed to save cloud project data",error);
+        if(
+          cloudProjectDataSaveQueueRef.current.get(projectIdKey)===entry&&
+          projectPersistenceModeRef.current===requestMode&&
+          activeCloudUserIdRef.current===requestUserId&&
+          loadedCloudProjectDataProjectIdsRef.current.has(projectIdKey)
+        )setProjectDataError("Falha ao salvar dados do projeto na nuvem.");
+      }finally{
+        entry.inFlight=false;
+        if(cloudProjectDataSaveQueueRef.current.get(projectIdKey)===entry){
+          if(
+            projectPersistenceModeRef.current!==requestMode||
+            activeCloudUserIdRef.current!==requestUserId||
+            !loadedCloudProjectDataProjectIdsRef.current.has(projectIdKey)
+          ){
+            if(entry.debounceId!=null)window.clearTimeout(entry.debounceId);
+            cloudProjectDataSaveQueueRef.current.delete(projectIdKey);
+          }else if(entry.pending){
+            if(entry.debounceId!=null)window.clearTimeout(entry.debounceId);
+            entry.debounceId=window.setTimeout(()=>{
+              entry.debounceId=null;
+              const flush=flushCloudProjectDataSaveRef.current;
+              if(flush)void flush(projectIdKey,entry);
+            },CLOUD_PROJECT_DATA_SAVE_DEBOUNCE_MS);
+          }else{
+            cloudProjectDataSaveQueueRef.current.delete(projectIdKey);
+          }
+        }
+      }
+    };
+
+    return()=>{flushCloudProjectDataSaveRef.current=null;};
+  },[]);
+  const scheduleCloudProjectDataSave=useCallback((projectId: ProjectId,snapshot: CloudProjectData)=>{
+    const projectIdKey=String(projectId);
+    if(
+      projectPersistenceModeRef.current!=='cloud'||
+      !activeCloudUserIdRef.current||
+      !loadedCloudProjectDataProjectIdsRef.current.has(projectIdKey)
+    )return;
+
+    const queue=cloudProjectDataSaveQueueRef.current;
+    let entry=queue.get(projectIdKey);
+    if(!entry){
+      entry={inFlight:false,pending:null,debounceId:null};
+      queue.set(projectIdKey,entry);
+    }
+
+    entry.pending=cloneCloudProjectDataSnapshot(snapshot);
+    if(entry.inFlight)return;
+
+    if(entry.debounceId!=null)window.clearTimeout(entry.debounceId);
+    entry.debounceId=window.setTimeout(()=>{
+      entry.debounceId=null;
+      const flush=flushCloudProjectDataSaveRef.current;
+      if(flush)void flush(projectIdKey,entry);
+    },CLOUD_PROJECT_DATA_SAVE_DEBOUNCE_MS);
+  },[]);
 
   useEffect(()=>{const fn=()=>setScrolled(window.scrollY>30);window.addEventListener('scroll',fn);return()=>window.removeEventListener('scroll',fn);},[]);
   useEffect(()=>{ if(typeof window!=='undefined') window.__gdt_loaded=true; },[]);
+  useEffect(()=>()=>clearCloudProjectDataTracking(),[clearCloudProjectDataTracking]);
   useEffect(()=>{
     projectPersistenceModeRef.current=projectPersistenceMode;
     activeCloudUserIdRef.current=activeCloudUserId;
   },[projectPersistenceMode,activeCloudUserId]);
+  useEffect(()=>{
+    activeProjectIdRef.current=activeProjectId;
+  },[activeProjectId]);
   useEffect(()=>{
     if(!project&&PROJECT_DEPENDENT_VIEWS.includes(view)){
       // Intentional navigation guard when the selected project is cleared.
@@ -5428,11 +5570,114 @@ function GDDHubInner(){
     setInput('');
   },[projects,project]);
 
+  useEffect(()=>{
+    if(projectPersistenceMode==='local'){
+      clearCloudProjectDataTracking();
+      cloudProjectDataProjectIdRef.current=null;
+      // Intentional source reset when returning from cloud mode.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCloudProjectDataProjectId(null);
+      setProjectDataError(null);
+      setIsProjectDataLoading(false);
+      setProjectDataSourceState("local");
+      setPData(getStoredProjectData(PDATA_DEFAULT));
+      return;
+    }
+
+    clearCloudProjectDataTracking();
+    cloudProjectDataProjectIdRef.current=null;
+    setCloudProjectDataProjectId(null);
+    setProjectDataError(null);
+    setIsProjectDataLoading(false);
+    setProjectDataSourceState("none");
+    // Intentional boundary reset: cloud mode must not reuse localStorage data or another user's data.
+    setPData({});
+  },[projectPersistenceMode,activeCloudUserId,clearCloudProjectDataTracking,setProjectDataSourceState]);
+
+  useEffect(()=>{
+    if(projectPersistenceMode!=='cloud')return;
+
+    if(projectListSource!=='cloud'||!activeProjectId||!isActiveProjectInLoadedList){
+      cloudProjectDataProjectIdRef.current=null;
+      // Intentional inactive-project reset while cloud project data is unavailable.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCloudProjectDataProjectId(null);
+      setIsProjectDataLoading(false);
+      setProjectDataSourceState("none");
+      return;
+    }
+
+    let isMounted=true;
+    const requestMode=projectPersistenceMode;
+    const requestUserId=activeCloudUserId;
+    const requestProjectId=activeProjectId;
+
+    cloudProjectDataProjectIdRef.current=null;
+    setCloudProjectDataProjectId(null);
+    setProjectDataError(null);
+    setIsProjectDataLoading(true);
+    setProjectDataSourceState("none");
+
+    const loadProjectDataForActiveProject=async()=>{
+      try{
+        const cloudProjectData=await supabaseProjectDataRepository.loadProjectData(requestProjectId);
+        if(
+          !isMounted||
+          projectPersistenceModeRef.current!==requestMode||
+          activeCloudUserIdRef.current!==requestUserId||
+          activeProjectIdRef.current!==requestProjectId
+        )return;
+
+        const requestProjectIdKey=String(requestProjectId);
+        loadedCloudProjectDataProjectIdsRef.current.add(requestProjectIdKey);
+        previousCloudProjectDataSnapshotsRef.current.set(requestProjectIdKey,cloudProjectData);
+        cloudProjectDataProjectIdRef.current=requestProjectId;
+        setCloudProjectDataProjectId(requestProjectId);
+        setProjectDataSourceState("cloud");
+        setPData(prev=>({...prev,[requestProjectId]:cloudProjectData}));
+      }catch(error){
+        console.error("Failed to load cloud project data",error);
+        if(
+          !isMounted||
+          projectPersistenceModeRef.current!==requestMode||
+          activeCloudUserIdRef.current!==requestUserId||
+          activeProjectIdRef.current!==requestProjectId
+        )return;
+
+        setProjectDataError("Falha ao carregar dados do projeto na nuvem.");
+        clearCloudProjectDataTracking(requestProjectId);
+        setProjectDataSourceState("none");
+        setPData(prev=>{const next={...prev};delete next[requestProjectId];return next;});
+      }finally{
+        if(
+          isMounted&&
+          projectPersistenceModeRef.current===requestMode&&
+          activeCloudUserIdRef.current===requestUserId&&
+          activeProjectIdRef.current===requestProjectId
+        )setIsProjectDataLoading(false);
+      }
+    };
+
+    void loadProjectDataForActiveProject();
+    return()=>{isMounted=false;};
+  },[projectPersistenceMode,projectListSource,activeCloudUserId,activeProjectId,isActiveProjectInLoadedList,clearCloudProjectDataTracking,setProjectDataSourceState]);
+
   // ── Persistência em localStorage ──────────────────────────────────────────
   useEffect(()=>{saveStoredLang(lang);},[lang]);
   useEffect(()=>{saveStoredTheme(theme);},[theme]);
   useEffect(()=>{if(projectPersistenceMode==='local'&&projectListSource==='local')saveStoredProjects(projects);},[projectPersistenceMode,projectListSource,projects]);
-  useEffect(()=>{saveStoredProjectData(pData);},[pData]);
+  useEffect(()=>{if(projectPersistenceMode==='local'&&projectDataSource==='local')saveStoredProjectData(pData);},[projectPersistenceMode,projectDataSource,pData]);
+  useEffect(()=>{
+    if(projectPersistenceMode!=='cloud')return;
+
+    loadedCloudProjectDataProjectIdsRef.current.forEach(projectIdKey=>{
+      const currentProjectData=(pData[projectIdKey]||{}) as CloudProjectData;
+      if(previousCloudProjectDataSnapshotsRef.current.get(projectIdKey)===currentProjectData)return;
+
+      previousCloudProjectDataSnapshotsRef.current.set(projectIdKey,currentProjectData);
+      scheduleCloudProjectDataSave(projectIdKey,currentProjectData);
+    });
+  },[projectPersistenceMode,pData,scheduleCloudProjectDataSave]);
 
   const getMod=(pId?: ProjectId | null,mId?: string | null): DocumentModuleData=>{
     return getProjectModuleData(pData,pId,mId);
@@ -5486,7 +5731,14 @@ function GDDHubInner(){
         if(projectPersistenceModeRef.current!==requestMode||activeCloudUserIdRef.current!==requestUserId)return;
         setProjectListSourceState("cloud");
         setProjects(p=>removeProject(p,id));
+        clearCloudProjectDataTracking(id);
         setPData(d=>{const n={...d};delete n[id];return n;});
+        if(activeProjectIdRef.current===id){
+          cloudProjectDataProjectIdRef.current=null;
+          setCloudProjectDataProjectId(null);
+          setProjectDataSourceState("none");
+          setProjectDataError(null);
+        }
         setConfirm(null);
       }catch(error){
         if(projectPersistenceModeRef.current!==requestMode||activeCloudUserIdRef.current!==requestUserId)return;
@@ -5511,9 +5763,22 @@ function GDDHubInner(){
       const requestMode=projectPersistenceMode,requestUserId=activeCloudUserId;
       try{
         const clonedProject=await supabaseProjectRepository.cloneProject(src,{color,emoji});
+        let projectDataCloneError=false;
+        try{
+          if(loadedCloudProjectDataProjectIdsRef.current.has(String(src.id))){
+            await supabaseProjectDataRepository.saveProjectData(clonedProject.id,(pData[src.id]||{}) as CloudProjectData);
+          }else{
+            await supabaseProjectDataRepository.cloneProjectData(src.id,clonedProject.id);
+          }
+        }catch(error){
+          projectDataCloneError=true;
+          console.error("Failed to clone cloud project data",error);
+        }
         if(projectPersistenceModeRef.current!==requestMode||activeCloudUserIdRef.current!==requestUserId)return;
         setProjectListSourceState("cloud");
         setProjects(p=>addProject(p,clonedProject));
+        if(projectDataCloneError)setProjectListError("Projeto clonado, mas houve falha ao copiar os dados internos.");
+        else setProjectDataError(null);
         setConfirm(null);
       }catch(error){
         if(projectPersistenceModeRef.current!==requestMode||activeCloudUserIdRef.current!==requestUserId)return;
@@ -5592,6 +5857,9 @@ function GDDHubInner(){
   useEffect(()=>{chatRef.current?.scrollIntoView({behavior:'smooth'});},[pData,loading]);
 
   const clr=module?.color||'#7c3aed';
+  const isActiveCloudProjectDataReady=
+    projectPersistenceMode!=='cloud'||!activeProjectId||
+    (projectDataSource==='cloud'&&cloudProjectDataProjectId===activeProjectId);
   const getModuleById=(id: string)=>MODULES.find(m=>m.id===id)||null;
   const setLangControl=setLang as Dispatch<SetStateAction<string>>;
   const setThemeControl=setTheme as Dispatch<SetStateAction<string>>;
@@ -5748,6 +6016,17 @@ function GDDHubInner(){
     </div>
   );
 
+  if(project&&PROJECT_DEPENDENT_VIEWS.includes(view)&&projectPersistenceMode==='cloud'&&!isActiveCloudProjectDataReady)return(
+    <div style={{...S.app,display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:16}}>
+      <div style={{fontSize:40}}>{projectDataError?'⚠️':'🔄'}</div>
+      <div style={{color:projectDataError?'#f87171':'var(--gdd-muted)',fontSize:14}}>
+        {projectDataError||'Carregando dados do projeto...'}
+      </div>
+      {projectDataError&&<button style={S.btn('#1a1a2e','#a78bfa',{border:'1px solid #4c1d9544',padding:'7px 16px',fontSize:13})} onClick={()=>setView('dashboard')}>Voltar ao dashboard</button>}
+      {!projectDataError&&isProjectDataLoading&&<div style={{color:'var(--gdd-dim)',fontSize:12}}>Aguarde um instante.</div>}
+    </div>
+  );
+
   if(view==='brainstorming')return(
     !project?null:
     <CanvasBoard key={project.id} project={project} pData={pData} setPData={setPData} onBack={()=>setView('project')}/>
@@ -5839,7 +6118,8 @@ function GDDHubInner(){
       </div>
       <div style={{padding:28}}>
         <h2 style={{margin:'0 0 4px',fontSize:20,fontWeight:700}}>Módulos</h2>
-        <p style={{color:th.muted,margin:'0 0 24px',fontSize:13}}>Selecione um módulo para criar e organizar seus documentos</p>
+        <p style={{color:th.muted,margin:projectDataError?'0 0 8px':'0 0 24px',fontSize:13}}>Selecione um módulo para criar e organizar seus documentos</p>
+        {projectDataError&&<p style={{color:'#f87171',margin:'0 0 16px',fontSize:12}}>{projectDataError}</p>}
         <div style={S.grid()}>
           {MODULES.map(m=>{
             const isBrain=m.id==='brainstorming';

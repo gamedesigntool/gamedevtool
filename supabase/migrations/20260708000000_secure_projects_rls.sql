@@ -1,5 +1,5 @@
 -- Secure project persistence foundation for Cloud Product Foundation.
--- Runtime code still uses localStorage until projectRepository is migrated.
+-- Authenticated runtime project lists are cloud-backed; anonymous/unconfigured usage remains local.
 
 create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),

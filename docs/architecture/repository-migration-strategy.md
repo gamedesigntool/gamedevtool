@@ -6,7 +6,7 @@ This document records the planning decision for incrementally introducing Supaba
 
 The Cloud Product Foundation goal is to support fresh authenticated cloud workspaces where users can create projects and reopen them from another browser or device. Existing local projects do not need to be imported or migrated in this phase.
 
-This document records the planning direction and current partial implementation. Runtime cloud persistence is active only for the top-level authenticated project list. It does not implement project data cloud persistence, sync, merge, realtime collaboration, autosave, global state, or broad repository replacement.
+This document records the planning direction and current partial implementation. Runtime cloud persistence is active for the top-level authenticated project list and the active project's `project_data` blob. It does not implement local import, sync, merge, realtime collaboration, autosave, global state, normalized project data tables, or broad repository replacement.
 
 ## Current State
 
@@ -23,11 +23,11 @@ Supabase foundations already exist:
 - secure `projects` table with RLS
 - Supabase-backed project list operations for authenticated users
 - secure `project_data` blob table with RLS
-- isolated `supabaseProjectDataRepository` for future runtime wiring
+- runtime `supabaseProjectDataRepository` wiring for active cloud project data blobs
 
 Authenticated users use Supabase for the top-level project list. Anonymous users and Supabase-unconfigured environments remain localStorage-backed.
 
-Login and logout do not import, merge, delete, or upload local project data. Runtime `projectDataRepository`, documents, tasks, canvas data, chats, settings, and assets remain local-only until the isolated blob repository is explicitly wired.
+Login and logout do not import, merge, delete, or upload existing local project data. Authenticated cloud projects load and save one `project_data` blob per active project. Anonymous and Supabase-unconfigured project data remains local-only.
 
 ## Repository Inventory
 
@@ -35,7 +35,7 @@ Login and logout do not import, merge, delete, or upload local project data. Run
 | --- | --- | --- | --- | --- |
 | `settingsRepository` | Stores user interface preferences such as language and theme. | Low. Useful later for account-level preferences, but not central to project ownership. | Low. Small data shape and low product impact. | Keep local for now. Consider cloud settings only after project persistence is stable. |
 | `projectRepository` | Stores the top-level `Project[]`: project identity, name, genre, platform, color, emoji, and progress. | High. Establishes the project ownership boundary required for future cloud persistence. | Medium. Runtime bootstrap and save behavior must avoid mixing local defaults with authenticated cloud rows. | First cloud persistence target. |
-| `projectDataRepository` / `supabaseProjectDataRepository` | Stores the `ProjectData` blob locally and, for the new cloud foundation, one single-project JSONB blob per project. | Very high, because it contains the most valuable user content. | Very high. It mixes multiple product areas and is tightly coupled to editor, export, AI message, guide, canvas, and Kanban flows. | Keep runtime local for now. Use the isolated blob repository only as a minimal bridge before later normalized boundaries. |
+| `projectDataRepository` / `supabaseProjectDataRepository` | Stores the `ProjectData` blob locally and, for authenticated cloud projects, one single-project JSONB blob per active project. | Very high, because it contains the most valuable user content. | Very high. It mixes multiple product areas and is tightly coupled to editor, export, AI message, guide, canvas, and Kanban flows. | Use the blob bridge minimally for multi-device persistence. Split into narrower repositories later. |
 
 ## First Migration Target
 
@@ -76,10 +76,10 @@ A signed-in user uses a fresh cloud workspace for migrated repositories.
 Authoritative source:
 
 - Supabase for the migrated top-level project list
-- Supabase `project_data` only after explicit runtime wiring
+- Supabase `project_data` for the active project data blob
 - localStorage remains the fallback only for anonymous or Supabase-unconfigured usage
 - cloud project rows belong to the authenticated user
-- localStorage remains authoritative for internal project data until those repositories are migrated
+- localStorage remains authoritative for anonymous and Supabase-unconfigured internal project data
 
 Existing local projects are not imported into the cloud workspace during this phase.
 
@@ -136,9 +136,9 @@ Logout must not mutate local data. It should only remove access to the authentic
    - login as a different user
    - local defaults are not written into cloud unintentionally
 7. Add the isolated `project_data` blob foundation.
-8. Wire project data runtime only after source tracking and stale async guards are in place.
+8. Wire project data runtime with source tracking and stale async guards.
 9. Only later split `projectDataRepository` into narrower boundaries.
-10. Migrate project data areas incrementally after project identity is stable:
+10. Migrate project data areas incrementally after the blob path is stable:
    - documents
    - document messages
    - production tasks
@@ -160,7 +160,7 @@ Logout must not mutate local data. It should only remove access to the authentic
 
 This phase must not implement:
 
-- cloud persistence beyond the top-level project list
+- normalized cloud persistence beyond the `project_data` blob
 - automatic sync
 - local-to-cloud import
 - local/cloud workspace coexistence for the same user
@@ -172,7 +172,7 @@ This phase must not implement:
 - global state
 - broad hooks extraction
 - controller-layer rewrites
-- `projectDataRepository` migration
+- normalized `projectDataRepository` split migration
 - document migration
 - asset or Supabase Storage migration
 - editor save semantic changes

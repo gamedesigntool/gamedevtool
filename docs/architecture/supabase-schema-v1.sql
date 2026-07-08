@@ -6,8 +6,8 @@
 -- Cloud Product Foundation update:
 -- public.projects is the first runtime cloud persistence foundation.
 -- public.project_data is the minimal blob foundation for internal project
--- contents. Runtime wiring remains separate; normalized tables below are
--- still the preferred future target once narrower repositories exist.
+-- contents in authenticated cloud projects. Normalized tables below are
+-- still future targets once narrower repositories exist.
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,

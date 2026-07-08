@@ -1,5 +1,5 @@
 -- Minimal project data blob foundation for Cloud Product Foundation.
--- Runtime wiring remains separate from this migration.
+-- Authenticated runtime uses this table for active project blobs; anonymous/unconfigured usage remains local.
 
 create table if not exists public.project_data (
   project_id uuid primary key references public.projects(id) on delete cascade,
