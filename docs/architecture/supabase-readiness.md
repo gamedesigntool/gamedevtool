@@ -40,7 +40,7 @@ The current product behavior should be preserved during this pass.
 
 ## Current Persistence Boundaries
 
-Current persistence is intentionally thin. Only the top-level authenticated project list has moved to Supabase.
+Current persistence is intentionally thin. Only the top-level authenticated project list and the active authenticated project's `project_data` blob have moved to Supabase.
 
 | Boundary | File | Current owner | Backend | localStorage key |
 | --- | --- | --- | --- | --- |
@@ -79,13 +79,16 @@ localStorage remains the active backing implementation for anonymous/unconfigure
 
 ## Target Supabase Model
 
-The pragmatic v1 Supabase model should favor explicit ownership and queryable product entities without normalizing every interactive sub-shape.
+The active runtime Supabase schema is intentionally limited to the tables the app actually uses:
 
-Proposed v1 Postgres entities:
-
-- `profiles`
 - `projects`
 - `project_data`
+
+`project_data.data` is the MVP bridge and current source of truth for authenticated internal project content. It allows fast iteration across new modules, guided flows, documents, production tasks, canvas and flow data, and AI chat history without schema churn.
+
+The future normalized Supabase model should favor explicit ownership and queryable product entities without normalizing every interactive sub-shape too early. These are planning targets only, not active runtime tables:
+
+- `profiles`
 - `documents`
 - `document_messages`
 - `production_tasks`
@@ -128,18 +131,32 @@ Storage should not be used for:
 - transient export overlays
 - editor draft state
 
+Large images should not remain embedded as base64 inside `project_data` long term. Until Storage exists, project data may store lightweight references used by the current runtime. Once Storage is introduced, binary data should move to Storage and project data should store references, keys, or URLs. An `assets` table should be added only when metadata, cleanup, deduplication, thumbnails, permissions, or analytics are real product needs.
+
 ### JSONB Choices
 
 JSONB is acceptable in v1 for shapes that are highly UI-tool-specific and not yet worth querying relationally:
 
 - `documents.flow_data`
-- `project_data.data`, as a short-term bridge before narrower repositories are wired
+- `project_data.data`, as the MVP bridge and current source of truth before narrower repositories are wired
 - `canvas_boards.elements`
 - `canvas_boards.strokes`
 - `assets.metadata`
 - migration metadata, if needed
 
 These shapes can be normalized later if product requirements demand collaboration, per-node history, per-element permissions, or analytics.
+
+The current blob approach is intentionally pragmatic but not ideal for every future need. Known weaknesses include:
+
+- coarse cache granularity
+- limited indexing and search inside documents, messages, tasks, and canvas data
+- weak analytics support
+- whole-blob writes instead of partial updates
+- large project blobs as projects grow
+- frequent canvas writes
+- multi-device conflicts without merge or version strategy
+- collaboration and realtime requirements
+- embedded base64 images or other large binary payloads
 
 ### Not Normalized Yet
 
@@ -175,11 +192,11 @@ Future persistence should split this blob into narrower boundaries:
 - `assetRepository` later for uploaded/generated images and Storage-backed metadata
 - flow builder data should remain inside `Document.flowData` initially, rather than becoming a separate normalized boundary
 
-Recommended migration order:
+Completed and future migration order:
 
-1. Keep `projectDataRepository` as the local snapshot repository.
-2. Add the isolated `project_data` blob foundation for fresh authenticated cloud projects.
-3. Wire runtime project data to the blob with project-data source tracking and stale async guards.
+1. Keep `projectDataRepository` as the local snapshot repository for anonymous and Supabase-unconfigured usage. Completed.
+2. Add the isolated `project_data` blob foundation for fresh authenticated cloud projects. Completed.
+3. Wire runtime project data to the blob with project-data source tracking and stale async guards. Completed.
 4. Split the blob into narrower repositories later, once the cloud project data path is stable.
 5. Migrate documents after project identity and async bootstrapping are stable.
 6. Normalize messages with the first document migration.
@@ -367,11 +384,11 @@ This pass must not:
 
 ## Recommended Next Implementation Step
 
-The next step should return to architectural planning before runtime persistence changes.
+The next step should return to architectural planning before normalized runtime persistence changes.
 
 Recommended focus:
 
-1. Decide the first repository boundary to prepare after authentication.
-2. Keep localStorage as the active runtime persistence until authenticated cloud project persistence is intentionally implemented.
-3. Prepare `projectRepository` as the first cloud persistence target for fresh authenticated cloud workspaces.
-4. Do not begin cloud sync, local/cloud merge, local-to-cloud import, Edge Functions, or AI proxying as part of the Cloud Product Foundation documentation update.
+1. Keep active Supabase migrations limited to `projects` and `project_data`.
+2. Treat `project_data.data` as the MVP source of truth for authenticated internal project content.
+3. Plan the first normalized repository only when a concrete product need requires search, indexing, partial updates, analytics, collaboration, or Storage-backed assets.
+4. Do not begin cloud sync, local/cloud merge, local-to-cloud import, Storage, Edge Functions, or AI proxying as part of the Cloud Product Foundation documentation update.

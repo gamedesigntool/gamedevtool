@@ -24,6 +24,10 @@ During the Cloud Product Foundation phase, the cloud path is a fresh authenticat
 
 Project contents use the `project_data` blob only for fresh authenticated cloud projects. Anonymous and Supabase-unconfigured usage remains localStorage-backed. Existing local project data is not imported, merged, or uploaded.
 
+The `project_data` blob is the current MVP bridge and source of truth for authenticated internal project content. It intentionally avoids schema churn while modules, guided flows, documents, tasks, canvas/flow data, and AI chat history continue to evolve.
+
+It is not the final architecture for search, analytics, partial updates, frequent canvas writes, collaboration, realtime, conflict resolution, or long-term embedded image storage. Future normalized repositories should be introduced module by module only when real product needs justify them, and future migrations may backfill from `project_data.data`.
+
 ## States
 
 ### `local`

@@ -29,6 +29,8 @@ Authenticated users use Supabase for the top-level project list. Anonymous users
 
 Login and logout do not import, merge, delete, or upload existing local project data. Authenticated cloud projects load and save one `project_data` blob per active project. Anonymous and Supabase-unconfigured project data remains local-only.
 
+Active Supabase migrations should create only the runtime tables currently used by the app: `projects` and `project_data`. Planned tables for profiles, documents, document messages, production tasks, canvas boards, assets, and settings belong in architecture docs until their repositories, ownership checks, RLS policies, and product requirements exist.
+
 ## Repository Inventory
 
 | Repository | Responsibility | Migration value | Migration risk | Recommendation |
@@ -54,6 +56,41 @@ It is better than `settingsRepository` because projects define the core ownershi
 - embedded image references or base64 image data
 
 The current cloud bridge stores one single-project blob only to unlock fresh authenticated multi-device persistence. This is not local import, sync, collaboration, or the final document/task/canvas model.
+
+## Project Data Blob Strategy
+
+`project_data.data` is the MVP bridge and current source of truth for authenticated internal project content. It supports fast iteration across new modules, guided flows, documents, production tasks, canvas and flow data, and AI chat history without schema churn.
+
+This bridge should remain deliberately narrow:
+
+- one row per cloud project
+- one JSONB object per active project
+- no normalized child tables until runtime repositories need them
+- no local-to-cloud import, merge, autosave, collaboration, or realtime assumptions
+
+Known future weaknesses:
+
+- coarse cache granularity
+- limited indexing and search inside documents, messages, tasks, and canvas data
+- weak analytics support
+- whole-blob writes instead of partial updates
+- large project blobs as project content grows
+- frequent canvas writes
+- multi-device conflicts without merge or version strategy
+- collaboration and realtime requirements
+- embedded base64 images or other large binary payloads
+
+Future normalized repositories should be extracted only when real product needs justify the extra schema and policies. The likely order remains:
+
+1. `documentRepository`
+2. `documentMessageRepository`
+3. `productionTaskRepository`
+4. canvas/flow repository
+5. assets and Supabase Storage
+
+Future migrations can backfill normalized tables from `project_data.data` once the target repositories exist.
+
+Large images should not remain embedded as base64 inside the blob long term. Future asset work should store binary data in Supabase Storage and keep references, keys, or URLs in project data. Add an `assets` table only when metadata, cleanup, deduplication, thumbnails, permissions, or analytics require it.
 
 ## Fresh Cloud Workspace Model
 

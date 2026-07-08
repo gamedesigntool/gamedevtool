@@ -1,13 +1,16 @@
 -- Supabase schema v1 draft for the Supabase Readiness Pass.
 -- This file is an architecture artifact, not an applied migration.
+-- Do not run it directly and do not copy future table definitions into active
+-- migrations until the runtime repositories, ownership model, RLS policies,
+-- and product requirements exist.
 -- It models the first pragmatic cloud persistence shape while preserving
 -- the current local-first product semantics.
 --
 -- Cloud Product Foundation update:
--- public.projects is the first runtime cloud persistence foundation.
--- public.project_data is the minimal blob foundation for internal project
--- contents in authenticated cloud projects. Normalized tables below are
--- still future targets once narrower repositories exist.
+-- public.projects and public.project_data are the only active runtime tables.
+-- public.project_data is the MVP JSONB bridge and current source of truth for
+-- authenticated internal project content. Normalized tables in this document
+-- are future planning targets once narrower repositories exist.
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,

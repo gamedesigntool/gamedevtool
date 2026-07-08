@@ -75,6 +75,7 @@ Current goals:
 - keep README and agent guidance aligned with real runtime behavior
 - keep fresh authenticated cloud project list persistence stable
 - keep fresh authenticated active project data blob persistence stable
+- keep active Supabase migrations limited to the current runtime schema: `projects` and `project_data`
 - keep `projectRepository` as the first cloud persistence target
 - preserve local-only behavior for anonymous and Supabase-unconfigured usage
 - keep validation commands passing before handoff
@@ -90,6 +91,8 @@ Current non-goals:
 - autosave
 - global state
 - broad hooks extraction
+- normalized documents/tasks/canvas/assets/settings tables in active migrations
+- Supabase Storage/assets handling
 - Edge Functions or secure AI proxy implementation
 - AI backend/provider proxy decisions
 - large rewrites
@@ -155,6 +158,7 @@ Authenticated cloud projects use Supabase `project_data` for the active project'
 Anonymous and Supabase-unconfigured users remain localStorage-backed.
 Project data remains local-only for anonymous and Supabase-unconfigured usage.
 Normalized documents, tasks, canvas, chats, settings, and assets remain future work.
+Active Supabase migrations must create only the runtime tables currently used by the app: `projects` and `project_data`.
 Signing in does not enable local-to-cloud import, automatic sync, merge, protected routes, account pages, Edge Functions, or AI proxying.
 
 ---
@@ -181,7 +185,7 @@ Repository migration has started for the top-level project list and the active p
 
 ## Repository Migration Focus
 
-Repository migration beyond the top-level project list remains future work.
+Repository migration beyond the top-level project list and active `project_data` blob remains future work.
 
 Planning areas:
 - projectRepository cloud persistence planning
@@ -196,13 +200,17 @@ Current planning decisions:
 - existing local projects do not need to be migrated in this phase
 - local-to-cloud import is not required in this phase
 - runtime cloud persistence exists for the authenticated top-level project list and active project data blob
+- `project_data.data` is the MVP bridge and current source of truth for authenticated internal project content
+- normalized tables should be introduced only when real product needs justify their repositories, ownership checks, and RLS policies
+- active migrations should not create planned future tables before runtime code uses them safely
 - normalized projectDataRepository split migration has not started
 - PersistenceContext is documented in docs/architecture/persistence-context.md
 - LocalToCloudImportService is historical and not active for this phase
 
 Future directions:
-- cloud persistence
+- normalized cloud persistence beyond the `project_data` blob
 - projectData split migration
+- documentRepository, documentMessageRepository, productionTaskRepository, canvas/flow repository, then assets/storage
 - secure AI proxying
 - Edge Functions
 - collaboration-ready foundations
@@ -257,15 +265,17 @@ Completed:
 Current:
 8. localStorage remains active for anonymous/unconfigured users and internal project data
 9. authenticated users use Supabase for top-level project list persistence
+10. authenticated active project content uses the `project_data` JSONB blob
 
 Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
 
 Future:
-10. projectData split planning
-11. document/project data cloud persistence
-12. Edge Functions / secure AI proxy after cloud persistence is stable
-13. optional realtime
+11. projectData split planning
+12. normalized document/task/canvas/chat persistence after product needs justify it
+13. Supabase Storage and asset metadata after image ownership, cleanup, and references are designed
+14. Edge Functions / secure AI proxy after cloud persistence is stable
+15. optional realtime
 
 ---
 
@@ -357,7 +367,7 @@ Implemented Supabase foundations:
 - optional environment configuration
 
 Planned later:
-- Postgres-backed persistence
+- normalized Postgres-backed persistence beyond `projects` and `project_data`
 - Supabase Storage
 - Edge Functions
 - Realtime
@@ -399,6 +409,8 @@ When implementing:
 - Do not imply signing in enables sync, import, merge, or cloud persistence beyond the top-level project list and active project data blob
 - Do not introduce merge or conflict resolution for this phase
 - Do not implement Edge Functions or AI proxying yet
+- Do not implement Supabase Storage or asset tables yet
+- Do not add unused future tables to active migrations
 - Do not introduce global state
 - Do not extract hooks prematurely
 - Do not overengineer abstractions
