@@ -20,6 +20,7 @@ Update for the Cloud Product Foundation phase:
 - testers are expected to start with a fresh authenticated cloud workspace
 - local-to-cloud import, coexistence, merge strategies, conflict resolution, and automatic sync are out of scope unless explicitly reintroduced later
 - `projectRepository` remains the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
+- the secure `projects` migration prepares cloud persistence, but runtime persistence remains localStorage until the repository implementation step
 
 ## Purpose
 

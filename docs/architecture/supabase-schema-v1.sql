@@ -2,6 +2,10 @@
 -- This file is an architecture artifact, not an applied migration.
 -- It models the first pragmatic cloud persistence shape while preserving
 -- the current local-first product semantics.
+--
+-- Cloud Product Foundation update:
+-- public.projects is the first runtime cloud persistence foundation.
+-- The real migration enables RLS for projects before repository runtime wiring.
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -15,13 +19,13 @@ comment on table public.profiles is
 
 create table public.projects (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
-  genre text,
-  platform text,
-  color text,
-  emoji text,
-  progress integer not null default 0,
+  genre text not null default 'Indefinido',
+  platform text not null default 'Indefinida',
+  color text not null,
+  emoji text not null,
+  progress integer not null default 0 check (progress >= 0 and progress <= 100),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   archived_at timestamptz
@@ -29,6 +33,48 @@ create table public.projects (
 
 comment on table public.projects is
   'Top-level user-owned game projects. Future sharing should be modeled separately, not through this v1 owner column.';
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger set_projects_updated_at
+before update on public.projects
+for each row
+execute function public.set_updated_at();
+
+alter table public.projects enable row level security;
+
+create policy "Users can read own projects"
+on public.projects
+for select
+to authenticated
+using (owner_id = auth.uid());
+
+create policy "Users can create own projects"
+on public.projects
+for insert
+to authenticated
+with check (owner_id = auth.uid());
+
+create policy "Users can update own projects"
+on public.projects
+for update
+to authenticated
+using (owner_id = auth.uid())
+with check (owner_id = auth.uid());
+
+create policy "Users can delete own projects"
+on public.projects
+for delete
+to authenticated
+using (owner_id = auth.uid());
 
 create table public.documents (
   id uuid primary key default gen_random_uuid(),
@@ -146,11 +192,10 @@ comment on table public.user_settings is
   'Cloud-backed user preferences. Local settings can remain local until login/cloud sync is enabled.';
 
 -- Future RLS policy placeholders:
--- 1. Enable row level security on all application tables before production use.
+-- 1. Enable row level security on all remaining application tables before production use.
 -- 2. profiles: users can select/update only their own profile row.
--- 3. projects: users can select/insert/update/delete projects where owner_id = auth.uid().
--- 4. documents, document_messages, production_tasks, canvas_boards:
+-- 3. documents, document_messages, production_tasks, canvas_boards:
 --    access should be derived through the parent project owner_id.
--- 5. assets: users can access assets where owner_id = auth.uid()
+-- 4. assets: users can access assets where owner_id = auth.uid()
 --    and the related project is also owned by auth.uid().
--- 6. user_settings: users can select/update only their own settings row.
+-- 5. user_settings: users can select/update only their own settings row.
