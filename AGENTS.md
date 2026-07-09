@@ -75,7 +75,7 @@ Completed Cloud Product Foundation:
 - authenticated users use Supabase for the top-level project list when Supabase is configured
 - authenticated cloud projects use Supabase `project_data` for the active project's internal content blob
 - anonymous and Supabase-unconfigured users remain localStorage-backed
-- active Supabase migrations remain limited to `projects` and `project_data`
+- Cloud Product Foundation persistence migrations remain limited to `projects` and `project_data`
 - local-to-cloud import, automatic sync, merge, realtime collaboration, and Storage/assets remain out of scope
 
 Current goals:
@@ -86,6 +86,7 @@ Current goals:
 - preserve local-first anonymous and Supabase-unconfigured behavior until explicit AI product decisions change it
 - keep Supabase Edge Functions as the MVP secure AI proxy unless implementation findings prove otherwise
 - keep the implemented text AI proxy path stable before image generation migration
+- enforce the MVP daily text AI usage counter before provider calls
 - avoid overbuilding multi-provider abstractions before the first secure provider path works
 - keep validation commands passing before handoff
 
@@ -172,9 +173,10 @@ Authenticated cloud projects use Supabase `project_data` for the active project'
 Anonymous and Supabase-unconfigured users remain localStorage-backed.
 Project data remains local-only for anonymous and Supabase-unconfigured usage.
 Normalized documents, tasks, canvas, chats, settings, and assets remain future work.
-Active Supabase migrations must create only the runtime tables currently used by the app: `projects` and `project_data`.
+Active Supabase migrations must create only the runtime tables currently used by the app: `projects`, `project_data`, and the Secure AI operational table `ai_daily_usage`.
 Signing in does not enable local-to-cloud import, automatic sync, merge, protected routes, account pages, image Storage, or image ownership migration.
 Text AI now flows through `aiMessageService` -> `aiClient` -> Supabase Edge Function -> provider adapter. Frontend text AI must not reintroduce provider-specific endpoints, models, headers, payload fields, or response parsing.
+The `text-generation` Edge Function enforces the MVP daily usage counter before provider calls. The active usage table is `public.ai_daily_usage`, which stores only user id, UTC date, request count, and timestamps.
 Current legacy image generation still calls Pollinations directly through `imageGenerationService`; it should migrate only after the secure text AI path is hardened and after image ownership/storage decisions are explicit.
 
 ---
@@ -196,6 +198,7 @@ Before future Secure AI implementation, re-check:
 - Does new text AI code go through `aiClient` instead of provider-specific frontend calls?
 - Has the text-generation Edge Function been validated locally with Deno and Supabase CLI?
 - Has authenticated text AI been manually tested with a real Supabase session?
+- Does the daily usage counter reject over-limit requests with safe `rate_limited` feedback?
 - Should `contextSnapshot` and `locale` be refined for the next text AI surface?
 - Should safe AI error feedback move from minimal alerts toward inline UI?
 - How should anonymous or Supabase-unconfigured AI behavior evolve now that direct text provider calls are removed?
@@ -250,8 +253,9 @@ Migration order:
 1. document and align the secure AI boundary
 2. define the minimal frontend AI client contract
 3. migrate text AI through the secure proxy first. Completed.
-4. harden text AI with Deno/Supabase validation, manual authenticated testing, `contextSnapshot`/`locale` refinement, and better inline error feedback as needed
-5. defer image generation migration until image ownership, Storage, cleanup, and HTML reference handling are explicitly designed
+4. add minimal per-user daily usage protection for text AI. Completed.
+5. harden text AI with Deno/Supabase validation, manual authenticated testing, `contextSnapshot`/`locale` refinement, and better inline error feedback as needed
+6. defer image generation migration until image ownership, Storage, cleanup, and HTML reference handling are explicitly designed
 
 Abstraction rule:
 - do not overbuild multi-provider abstractions before the first secure provider path works
@@ -316,6 +320,7 @@ Current:
 9. authenticated users use Supabase for top-level project list persistence
 10. authenticated active project content uses the `project_data` JSONB blob
 11. text AI uses the secure Supabase Edge Function proxy path
+12. text AI is protected by a minimal per-user daily usage counter
 
 Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
@@ -323,12 +328,12 @@ Secure AI planning is captured in:
 - docs/architecture/secure-ai-foundation.md
 
 Future:
-12. Deno/Supabase CLI validation and manual authenticated text AI hardening
-13. projectData split planning
-14. normalized document/task/canvas/chat persistence after product needs justify it
-15. Supabase Storage and asset metadata after image ownership, cleanup, and references are designed
-16. image generation through secure proxy after Storage/asset ownership is designed
-17. optional realtime
+13. Deno/Supabase CLI validation and manual authenticated text AI hardening
+14. projectData split planning
+15. normalized document/task/canvas/chat persistence after product needs justify it
+16. Supabase Storage and asset metadata after image ownership, cleanup, and references are designed
+17. image generation through secure proxy after Storage/asset ownership is designed
+18. optional realtime
 
 ---
 

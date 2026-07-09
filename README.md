@@ -36,6 +36,7 @@ Existing local projects are not imported or merged into cloud workspaces for thi
 - Optional Supabase Auth session foundation when configured.
 - Cloud-backed project list persistence for authenticated users when Supabase is configured.
 - Cloud-backed active project data persistence through the `project_data` JSONB blob for authenticated users when Supabase is configured.
+- Secure text AI proxy through a Supabase Edge Function for authenticated users, with a minimal daily usage counter.
 
 ## What Does Not Exist Yet
 
@@ -45,7 +46,7 @@ Existing local projects are not imported or merged into cloud workspaces for thi
 - Local/cloud merge or conflict resolution.
 - Normalized Supabase-backed repositories for document, task, canvas, chat, or asset detail data.
 - Supabase Storage-backed assets.
-- Edge Functions or a secure AI proxy.
+- Secure image generation proxying or Storage-backed generated assets.
 - Protected routes, account pages, or cloud workspace switching.
 - Realtime collaboration.
 

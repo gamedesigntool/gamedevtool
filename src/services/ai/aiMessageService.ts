@@ -35,6 +35,7 @@ export function getAiMessageErrorText(error: unknown): string {
     unconfigured: "A IA segura precisa do Supabase configurado para funcionar.",
     unauthorized: "Entre na sua conta para usar a IA neste projeto.",
     invalid_request: "Não foi possível enviar esta solicitação para a IA.",
+    rate_limited: "Você atingiu o limite diário de uso da IA. Tente novamente amanhã.",
     timeout: "A IA demorou demais para responder. Tente novamente.",
     provider_failure: "Não foi possível gerar uma resposta agora. Tente novamente em instantes.",
     unexpected_error: "Não foi possível concluir a solicitação de IA.",

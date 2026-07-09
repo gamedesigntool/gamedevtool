@@ -54,6 +54,14 @@ type AuthContext = {
   supabase: SupabaseClientInstance;
 };
 
+type DailyUsageResult = {
+  allowed: boolean;
+  requestCount: number;
+  requestLimit: number;
+  usageDate: string;
+  reason?: string;
+};
+
 class SecureAiError extends Error {
   code: TextGenerationErrorCode;
   status: number;
@@ -103,6 +111,17 @@ function logEvent(
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDailyUsageResult(value: unknown): value is DailyUsageResult {
+  if (!isObject(value)) return false;
+
+  return (
+    typeof value.allowed === "boolean" &&
+    typeof value.requestCount === "number" &&
+    typeof value.requestLimit === "number" &&
+    typeof value.usageDate === "string"
+  );
 }
 
 function readOptionalString(
@@ -344,6 +363,46 @@ async function assertProjectAccess(
   }
 }
 
+async function consumeDailyUsage(
+  authContext: AuthContext,
+  requestId: string,
+  textRequest: TextGenerationRequest,
+): Promise<DailyUsageResult> {
+  const { data, error } = await authContext.supabase.rpc(
+    "try_consume_ai_daily_request",
+  );
+
+  if (error || !isDailyUsageResult(data)) {
+    throw new SecureAiError(
+      "unexpected_error",
+      "Unable to validate AI usage limit.",
+      500,
+      { cause: error },
+    );
+  }
+
+  if (!data.allowed) {
+    logEvent("warn", "secure_ai_text_generation_rate_limited", {
+      requestId,
+      userId: authContext.userId,
+      projectId: textRequest.projectId,
+      capability: textRequest.capability,
+      requestCount: data.requestCount,
+      requestLimit: data.requestLimit,
+      usageDate: data.usageDate,
+      reason: data.reason,
+    });
+
+    throw new SecureAiError(
+      "rate_limited",
+      "Daily secure AI request limit reached.",
+      429,
+    );
+  }
+
+  return data;
+}
+
 function buildSystemInstruction(request: TextGenerationRequest): string {
   const responseLanguage = request.locale === "en" ? "English" : "Brazilian Portuguese";
   const context = request.contextSnapshot || "No context snapshot was supplied.";
@@ -415,12 +474,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const textRequest = validateRequestBody(body);
 
     await assertProjectAccess(authContext.supabase, textRequest.projectId);
+    const dailyUsage = await consumeDailyUsage(authContext, requestId, textRequest);
 
     logEvent("info", "secure_ai_text_generation_started", {
       requestId,
       userId: authContext.userId,
       projectId: textRequest.projectId,
       capability: textRequest.capability,
+      requestCount: dailyUsage.requestCount,
+      requestLimit: dailyUsage.requestLimit,
+      usageDate: dailyUsage.usageDate,
     });
 
     const provider = createTextProvider();

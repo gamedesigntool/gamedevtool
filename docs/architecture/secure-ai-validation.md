@@ -10,6 +10,7 @@ It validates:
 - local Edge Function startup with required environment variables;
 - authenticated invocation through Supabase Auth;
 - expected safe failures;
+- MVP daily usage-limit enforcement;
 - logging hygiene.
 
 It does not cover image generation. Image generation remains legacy/direct until Storage, ownership, cleanup, and reference handling are designed.
@@ -93,6 +94,7 @@ Expected success behavior:
 - `aiClient` invokes `text-generation`;
 - the Edge Function validates the Supabase session;
 - the Edge Function validates project access through RLS;
+- the Edge Function consumes one daily usage counter slot before calling the provider;
 - the provider adapter calls the provider server-side;
 - the frontend does not expose provider endpoint, model, headers, payload fields, response format, or secrets.
 
@@ -130,6 +132,22 @@ Expected result:
 - no raw provider details leaked to the frontend;
 - logs identify the request id/status/code but do not include prompts, messages, document content, or secrets.
 
+### Daily Usage Limit
+
+The MVP text-generation limit is 50 attempted provider calls per authenticated user per UTC day. The limit is hardcoded inside `public.try_consume_ai_daily_request()` so authenticated callers cannot choose a higher value.
+
+To validate it, temporarily lower the SQL function's internal limit in a throwaway local branch or pre-seed `public.ai_daily_usage` for the signed-in user and current UTC date.
+
+Expected result:
+
+- HTTP 429;
+- normalized error code: `rate_limited`;
+- no provider call;
+- logs include request id, user id, project id, capability, usage date, request count, and request limit only;
+- no prompt/message/document content is logged.
+
+Do not commit temporary limit changes or seeded local data.
+
 ### Provider Timeout or Provider Failure
 
 If practical, test by using an invalid provider key, blocking provider network access, or temporarily lowering the provider timeout in a throwaway local branch.
@@ -152,6 +170,7 @@ Logs may include:
 - project id;
 - capability;
 - normalized status/code;
+- daily usage date/count/limit;
 - duration;
 - rough token usage when available.
 
@@ -169,6 +188,7 @@ Logs must not include:
 
 - If authenticated requests fail with `unauthorized`, verify the frontend session is current and the request includes a bearer token.
 - If project access fails, verify the project id is a cloud UUID owned by the signed-in user and RLS migrations are applied.
+- If requests return `rate_limited`, verify `public.ai_daily_usage` for the signed-in user and the current UTC date.
 - If the function reports provider failure, verify `ANTHROPIC_API_KEY` is configured in the Edge Function environment.
 - If Deno check fails on `npm:` imports, verify the local Deno version supports npm specifiers.
 - If local serving works but deployed serving fails, compare local env variables with deployed function secrets.

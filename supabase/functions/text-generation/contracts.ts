@@ -33,6 +33,7 @@ export type TextGenerationSuccessResponse = {
 export type TextGenerationErrorCode =
   | "unauthorized"
   | "invalid_request"
+  | "rate_limited"
   | "provider_failure"
   | "timeout"
   | "unexpected_error";

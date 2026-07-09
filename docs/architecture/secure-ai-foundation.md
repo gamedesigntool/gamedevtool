@@ -31,6 +31,7 @@ Text AI has been migrated to the secure proxy path:
 - `src/services/ai/aiClient.ts` is the frontend transport boundary for text generation;
 - `aiClient` invokes the `text-generation` Supabase Edge Function;
 - Anthropic request construction, model selection, response parsing, and credentials are isolated server-side behind the provider adapter.
+- the Edge Function enforces a minimal per-user daily usage counter before provider calls.
 
 Remaining text AI risks:
 
@@ -38,6 +39,7 @@ Remaining text AI risks:
 - AI responses are rendered as HTML after markdown conversion, so output handling must remain conservative.
 - `contextSnapshot` and `locale` usage still need refinement across frontend call sites.
 - Deno/Supabase CLI validation has not been run in this environment and remains required locally.
+- The MVP usage counter is intentionally coarse and does not implement billing, plan tiers, or token-based quotas.
 
 Current image generation has a separate risk profile:
 
@@ -193,6 +195,20 @@ Initial text response shape:
 
 The frontend should not send provider model names, provider URLs, API keys, or provider-specific options unless explicitly exposed as product-level configuration later.
 
+## MVP Usage Limit
+
+The first secure text path uses a minimal Postgres-backed daily request counter:
+
+- table: `public.ai_daily_usage`;
+- RPC: `public.try_consume_ai_daily_request()`;
+- limit: 50 text-generation attempts per authenticated user per UTC day;
+- enforcement point: inside the `text-generation` Edge Function after auth/project validation and before the provider call;
+- stored metadata: `user_id`, `usage_date`, `request_count`, timestamps only.
+
+The counter increments before the provider call. This can count provider failures against the user limit, but it is simpler and safer for MVP cost protection than incrementing only after successful responses.
+
+The counter does not store prompts, messages, document content, generated content, provider payloads, provider secrets, or billing data.
+
 ## Authentication Expectations
 
 Secure AI calls should require an authenticated Supabase session for cloud-backed AI execution.
@@ -310,7 +326,7 @@ MVP controls should be simple:
 - cap request size;
 - cap response size;
 - use conservative provider max tokens;
-- apply basic per-user rate limits or daily usage counters;
+- apply the per-user daily usage counter before provider calls;
 - reject unsupported capabilities;
 - avoid exposing provider model choice to the frontend.
 
@@ -325,10 +341,11 @@ Complex billing and enterprise-grade rate limiting are not part of this epic.
 5. Add a provider adapter for the first text provider.
 6. Migrate `aiMessageService` call path to the AI client/proxy without changing UI behavior.
 7. Migrate document chat, guide chats, benchmarking, and concept generation through the secure text path.
-8. Validate authenticated text AI manually with a real Supabase session and Edge Function environment.
-9. Reassess anonymous/local AI behavior explicitly.
-10. Refine `contextSnapshot`, `locale`, and inline error handling after the secure text path is stable.
-11. Plan image generation migration separately, including Storage and asset ownership.
+8. Add minimal per-user daily usage protection for text AI. Completed.
+9. Validate authenticated text AI manually with a real Supabase session and Edge Function environment.
+10. Reassess anonymous/local AI behavior explicitly.
+11. Refine `contextSnapshot`, `locale`, and inline error handling after the secure text path is stable.
+12. Plan image generation migration separately, including Storage and asset ownership.
 
 ## Remaining Risks
 
@@ -337,6 +354,7 @@ Complex billing and enterprise-grade rate limiting are not part of this epic.
 - AI messages remain embedded in `project_data` until future document/message repositories exist.
 - Markdown-to-HTML rendering must remain conservative.
 - Anonymous AI behavior is not yet decided.
+- Usage protection is request-count based, not token-budget based.
 - Edge Function runtime constraints may affect provider SDK usage.
 - Local Deno/Supabase CLI validation is still required before treating the Edge Function runtime as fully verified.
 - Image generation security depends on future Storage and asset ownership design.
