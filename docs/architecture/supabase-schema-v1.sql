@@ -7,7 +7,8 @@
 -- the current local-first product semantics.
 --
 -- Cloud Product Foundation update:
--- public.projects and public.project_data are the only active runtime tables.
+-- public.projects and public.project_data are the active product-persistence runtime tables.
+-- public.ai_daily_usage is a separate Secure AI operational usage counter.
 -- public.project_data is the MVP JSONB bridge and current source of truth for
 -- authenticated internal project content. Normalized tables in this document
 -- are future planning targets once narrower repositories exist.

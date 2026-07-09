@@ -22,7 +22,8 @@ Update for the Cloud Product Foundation phase:
 - `projectRepository` is the first cloud persistence target, reframed as cloud-native persistence for new authenticated projects
 - the secure `projects` migration and runtime repository wiring now support cloud-backed project lists for authenticated users
 - a secure `project_data` blob table and `supabaseProjectDataRepository` now support active-project blob persistence for authenticated cloud projects
-- normalized documents, tasks, canvas data, chats, settings, assets, Edge Functions, and AI proxying remain future work
+- normalized documents, tasks, canvas data, chats, settings, assets, image AI proxying, and Storage-backed assets remain future work
+- secure text AI proxying now exists as part of the later Secure AI Foundation phase
 
 ## Purpose
 
@@ -315,7 +316,7 @@ Realtime should not be used yet for:
 
 ## Edge Functions Strategy
 
-Future AI calls should go through Supabase Edge Functions rather than directly from the frontend to provider APIs.
+Text AI now goes through a Supabase Edge Function rather than directly from the frontend to provider APIs. Image AI remains future work until Storage and asset ownership are designed.
 
 Edge Functions should own:
 
@@ -388,7 +389,7 @@ The next step should return to architectural planning before normalized runtime 
 
 Recommended focus:
 
-1. Keep active Supabase migrations limited to `projects` and `project_data`.
+1. Keep active product-persistence migrations limited to `projects` and `project_data`; `ai_daily_usage` is an operational Secure AI usage counter, not a normalized product-data table.
 2. Treat `project_data.data` as the MVP source of truth for authenticated internal project content.
 3. Plan the first normalized repository only when a concrete product need requires search, indexing, partial updates, analytics, collaboration, or Storage-backed assets.
 4. Do not begin cloud sync, local/cloud merge, local-to-cloud import, Storage, Edge Functions, or AI proxying as part of the Cloud Product Foundation documentation update.

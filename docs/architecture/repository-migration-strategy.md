@@ -29,7 +29,7 @@ Authenticated users use Supabase for the top-level project list. Anonymous users
 
 Login and logout do not import, merge, delete, or upload existing local project data. Authenticated cloud projects load and save one `project_data` blob per active project. Anonymous and Supabase-unconfigured project data remains local-only.
 
-Active Supabase migrations should create only the runtime tables currently used by the app: `projects` and `project_data`. Planned tables for profiles, documents, document messages, production tasks, canvas boards, assets, and settings belong in architecture docs until their repositories, ownership checks, RLS policies, and product requirements exist.
+Active Supabase migrations for product persistence should create only the runtime persistence tables currently used by the app: `projects` and `project_data`. The Secure AI operational usage table `ai_daily_usage` is separate from product data persistence and stores only safe request-count metadata. Planned tables for profiles, documents, document messages, production tasks, canvas boards, assets, and settings belong in architecture docs until their repositories, ownership checks, RLS policies, and product requirements exist.
 
 ## Repository Inventory
 
