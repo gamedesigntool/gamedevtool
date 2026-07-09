@@ -159,22 +159,25 @@ This epic must not introduce:
 
 The frontend AI client should expose product-level operations rather than provider-level operations.
 
-Initial text request shape should be close to:
+Initial Edge Function:
+
+- `supabase/functions/text-generation`
+
+Initial text request shape:
 
 - `capability`: document chat, guide chat, benchmarking, or concept generation;
-- `projectId`: required for cloud-backed authenticated requests;
+- `projectId`: required cloud project id;
 - `moduleId`: when relevant;
 - `documentId`: when relevant;
 - `contextSnapshot`: text/context selected by the frontend at send time;
 - `messages`: domain chat messages, not provider-native messages;
 - `locale`: current product language when relevant.
 
-Initial text response shape should be close to:
+Initial text response shape:
 
 - `text`;
 - `requestId`;
 - optional `usage`;
-- optional normalized `finishReason`;
 - optional normalized warning or recoverable error metadata.
 
 The frontend should not send provider model names, provider URLs, API keys, or provider-specific options unless explicitly exposed as product-level configuration later.
@@ -204,6 +207,13 @@ Rules:
 - Edge Function environment variables own provider credentials;
 - frontend code must not construct provider authorization headers.
 
+Initial Edge Function secret names:
+
+- `ANTHROPIC_API_KEY`: required by the current text provider adapter.
+- `ANTHROPIC_TEXT_MODEL`: optional server-side model override.
+
+These are Edge Function environment variables only. They must not be mirrored into root `.env.example`, Vite config, or frontend code.
+
 ## Error Handling Expectations
 
 The secure proxy should normalize provider and validation failures into stable frontend categories:
@@ -229,6 +239,22 @@ Expectations:
 - proxy should set an upper bound for provider calls;
 - long-running work should not be introduced in the initial path;
 - image generation timeouts should be designed separately with Storage cleanup rules.
+
+## Edge Function Validation
+
+The text-generation Edge Function should be validated with Deno before handoff when the local toolchain provides it:
+
+```sh
+deno check supabase/functions/text-generation/index.ts
+```
+
+For local runtime validation with Supabase CLI, use:
+
+```sh
+supabase functions serve text-generation --env-file <edge-env-file>
+```
+
+Do not treat the frontend `typecheck` script as full Edge Function validation. The current app TypeScript check only covers `src`.
 
 ## Logging and Observability Expectations
 
