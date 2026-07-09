@@ -1,49 +1,44 @@
 import type { ChatMessage } from "../../domain/gameDesignToolTypes";
+import { AiClientError, aiClient, type TextGenerationCapability } from "./aiClient";
 
 type SendAiMessageRequest = {
+  capability: TextGenerationCapability;
+  projectId: string | number;
+  moduleId?: string;
+  documentId?: string;
+  locale?: "pt" | "en";
   system?: string;
   messages: ChatMessage[];
   maxTokens: number;
   fallback?: string;
 };
 
-type AnthropicMessagesResponse = {
-  content?: {
-    text?: string;
-  }[];
-};
-
-async function parseAnthropicResponse(response: Response): Promise<AnthropicMessagesResponse> {
-  try {
-    return (await response.json()) as AnthropicMessagesResponse;
-  } catch {
-    throw new Error("AI provider returned invalid JSON.");
-  }
-}
-
-function getResponseText(data: AnthropicMessagesResponse): string {
-  const text = data.content?.[0]?.text;
-  if (!text) throw new Error("AI provider response did not include text.");
-  return text;
-}
-
 export async function sendAiMessage(request: SendAiMessageRequest): Promise<string> {
-  const body = {
-    model: "claude-sonnet-4-20250514",
-    max_tokens: request.maxTokens,
-    ...(request.system ? { system: request.system } : {}),
+  const response = await aiClient.generateText({
+    capability: request.capability,
+    projectId: String(request.projectId),
+    moduleId: request.moduleId,
+    documentId: request.documentId,
+    locale: request.locale,
+    instructions: request.system,
     messages: request.messages,
-  };
-
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
   });
 
-  if (!r.ok) {
-    throw new Error(`AI provider request failed with status ${r.status}.`);
-  }
+  return response.text;
+}
 
-  return getResponseText(await parseAnthropicResponse(r));
+export function getAiMessageErrorText(error: unknown): string {
+  const code = error instanceof AiClientError ? error.code : "unexpected_error";
+  const requestId = error instanceof AiClientError ? error.requestId : undefined;
+
+  const message = {
+    unconfigured: "A IA segura precisa do Supabase configurado para funcionar.",
+    unauthorized: "Entre na sua conta para usar a IA neste projeto.",
+    invalid_request: "Não foi possível enviar esta solicitação para a IA.",
+    timeout: "A IA demorou demais para responder. Tente novamente.",
+    provider_failure: "Não foi possível gerar uma resposta agora. Tente novamente em instantes.",
+    unexpected_error: "Não foi possível concluir a solicitação de IA.",
+  }[code];
+
+  return requestId ? `${message} ID da solicitação: ${requestId}` : message;
 }

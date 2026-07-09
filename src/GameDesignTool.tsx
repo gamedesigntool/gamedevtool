@@ -27,7 +27,7 @@ import { getStoredProjects, saveStoredProjects } from "./repositories/projectRep
 import { getStoredLang, getStoredTheme, saveStoredLang, saveStoredTheme } from "./repositories/settingsRepository";
 import { supabaseProjectDataRepository, type CloudProjectData } from "./repositories/supabaseProjectDataRepository";
 import { supabaseProjectRepository } from "./repositories/supabaseProjectRepository";
-import { sendAiMessage } from "./services/ai/aiMessageService";
+import { getAiMessageErrorText, sendAiMessage } from "./services/ai/aiMessageService";
 import { getCurrentAuthSession, observeAuthSession, type AuthSessionSnapshot } from "./services/auth/authSessionService";
 import { loadInitialProjects } from "./services/bootstrap/projectBootstrapService";
 import { generateImageUrl } from "./services/image/imageGenerationService";
@@ -44,6 +44,11 @@ declare global {
 
 type ThemeKey = keyof typeof THEMES;
 type LangKey = keyof typeof TR;
+
+function reportAiTextError(error: unknown) {
+  console.error(error);
+  window.alert(getAiMessageErrorText(error));
+}
 
 type FlowNodeType = keyof typeof FB_DEFS;
 type FlowNodeDef = (typeof FB_DEFS)[FlowNodeType];
@@ -391,9 +396,9 @@ function CanvasBoard({project,pData,setPData,onBack}:{project: Project; pData: P
     setMsgs(nm);setChatIn('');setChatLoad(true);
     const sys='Você é um especialista em análise e benchmarking de jogos. Sua ÚNICA função é ajudar game designers a encontrar e analisar jogos de referência. Ao receber perguntas sobre mecânicas, gêneros ou estilos, forneça recomendações de 3-5 jogos com análise concisa de cada um (mecânicas-chave, público, diferenciais). Seja direto e útil. Responda SOMENTE sobre jogos e game design. Responda em português brasileiro.';
     try{
-      const reply=await sendAiMessage({system:sys,messages:nm,maxTokens:800});
+      const reply=await sendAiMessage({capability:'benchmarking',projectId:project.id,moduleId:'brainstorming',system:sys,messages:nm,maxTokens:800});
       setMsgs([...nm,{role:'assistant',content:reply}]);
-    }catch(err){console.error(err);}finally{setChatLoad(false);}
+    }catch(err){reportAiTextError(err);}finally{setChatLoad(false);}
   };
 
   return(
@@ -592,9 +597,9 @@ Projeto: ${project.name} (${project.genre})
 
 Escreva 2 a 3 frases que capturem a essência do personagem — sua forma de agir, sua identidade narrativa e o que o torna único. Seja específico, evocativo e coeso. Sem títulos, apenas o texto descritivo.`;
     try{
-      const reply=await sendAiMessage({messages:[{role:'user',content:prompt}],maxTokens:300,fallback:''});
+      const reply=await sendAiMessage({capability:'concept-generation',projectId:project.id,moduleId:'characters',messages:[{role:'user',content:prompt}],maxTokens:300,fallback:''});
       setConceito(reply);
-    }catch(e){console.error(e);}finally{setConceitoLoading(false);}
+    }catch(e){reportAiTextError(e);}finally{setConceitoLoading(false);}
   };
 
 
@@ -607,15 +612,15 @@ Escreva 2 a 3 frases que capturem a essência do personagem — sua forma de agi
   };
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:buildCtx(),messages:curr,maxTokens:600});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'characters',system:buildCtx(),messages:curr,maxTokens:600});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const AI_HINTS=[
@@ -1127,15 +1132,15 @@ Guie o usuário de forma concisa e prática, sempre referenciando o framework MD
   };
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'mechanics',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const compileHtml=()=>{
@@ -1412,15 +1417,15 @@ Guie o usuário de forma prática e sempre referenciando a pesquisa de Lazzaro (
   };
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'mechanics',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const compileHtml=()=>{
@@ -1751,15 +1756,15 @@ ${step>=2?`- Structure: ${structure||'—'}`:''}
 Guie o usuário de forma prática, referenciando sempre o framework Colors of Game Design. Foque em como as cores se conectam e se suportam mutuamente. Responda em português brasileiro.`;
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'mechanics',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const compileHtml=()=>{
@@ -2150,15 +2155,15 @@ Score total: ${totalScore} | White Hat: ${whiteScore} | Black Hat: ${blackScore}
 Guie com base no framework Octalysis. Foque em Human-Focused Design e no equilíbrio entre as drives. Responda em português brasileiro.`;
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'mechanics',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const compileHtml=()=>{
@@ -2564,15 +2569,15 @@ Componentes preenchidos: ${COMPONENTS.filter(c=>filled(c.id)).map(c=>c.label).jo
 Guie com base em SDT e na pesquisa empírica de Ryan et al. (2006). Foque em como satisfazer cada necessidade através de mecânicas concretas. Responda em português brasileiro.`;
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'mechanics',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const compileHtml=()=>{
@@ -2958,15 +2963,15 @@ Elementos preenchidos: ${filledEls.map(e=>e.label).join(', ')||'Nenhum ainda'}
 Foque na HARMONIA entre os 4 elementos e em como cada um reforça o tema central. Use exemplos concretos de jogos conhecidos. Responda em português brasileiro.`;
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const um: ChatMessage={role:'user',content:txt};
     const curr: ChatMessage[]=[...aiMsgs[step],um];
     setAiMsgs(m=>{const n=[...m];n[step]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'mechanics',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[step]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   const compileHtml=()=>{
@@ -3379,16 +3384,16 @@ Mecânicas documentadas: ${filledRows.length}
 Responda em português brasileiro. Use exemplos de jogos conhecidos.`;
 
   const sendAi=async(msg?: string)=>{
-    const txt=msg||aiInput;if(!txt.trim()||aiLoad)return;
+    const txt=msg||aiInput;if(!project||!txt.trim()||aiLoad)return;
     const si=Math.min(step,3);
     const um: ChatMessage={role:'user',content:txt};
     const curr=[...aiMsgs[si],um];
     setAiMsgs(m=>{const n=[...m];n[si]=curr;return n;});
     setAiInput('');setAiLoad(true);
     try{
-      const reply=await sendAiMessage({system:getCtx(),messages:curr,maxTokens:800});
+      const reply=await sendAiMessage({capability:'guide-chat',projectId:project.id,moduleId:'narrative',system:getCtx(),messages:curr,maxTokens:800});
       setAiMsgs(m=>{const n=[...m];n[si]=[...curr,{role:'assistant',content:reply}];return n;});
-    }catch(e){console.error(e);}finally{setAiLoad(false);}
+    }catch(e){reportAiTextError(e);}finally{setAiLoad(false);}
   };
 
   // ── Live Ludonarrative Loop SVG ──────────────────────────────────────────────
@@ -5848,11 +5853,11 @@ function GDDHubInner(){
     setPData(prev=>setDocumentMessagesInProjectData(prev,projectId,moduleId,docId,currentMsgs));
     const sys='Você é um assistente especialista em Game Design colaborando no documento "'+docTitle+'" do módulo "'+moduleLabel+'", projeto "'+projectName+'".\n\nCONTEÚDO ATUAL DO DOCUMENTO:\n'+(stripHtml(contentSnapshot).slice(0,900)||'{vazio}')+'\n\nCONTEXTO DO PROJETO:\n'+buildCtx(projectId,moduleId,docId)+'\n\nUse Markdown rico: **negrito**, # Título, ## Subtítulo, - listas. Seja detalhado e criativo. Responda em português brasileiro.';
     try{
-      const reply=await sendAiMessage({system:sys,messages:currentMsgs,maxTokens:1200});
+      const reply=await sendAiMessage({capability:'document-chat',projectId,moduleId,documentId:docId,system:sys,messages:currentMsgs,maxTokens:1200});
       const assistantMsg: ChatMessage={role:'assistant',content:reply};
       // Use functional updater again to avoid stale closure on the response write
       setPData(prev=>appendDocumentMessageInProjectData(prev,projectId,moduleId,docId,assistantMsg));
-    }catch(e){console.error(e);}finally{setLoading(false);}
+    }catch(e){reportAiTextError(e);}finally{setLoading(false);}
   };
   useEffect(()=>{chatRef.current?.scrollIntoView({behavior:'smooth'});},[pData,loading]);
 

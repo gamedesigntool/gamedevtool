@@ -169,7 +169,8 @@ Initial text request shape:
 - `projectId`: required cloud project id;
 - `moduleId`: when relevant;
 - `documentId`: when relevant;
-- `contextSnapshot`: text/context selected by the frontend at send time;
+- `instructions`: product-level behavior and response instructions for the current AI surface;
+- `contextSnapshot`: contextual/reference material selected by the frontend at send time;
 - `messages`: domain chat messages, not provider-native messages;
 - `locale`: current product language when relevant.
 

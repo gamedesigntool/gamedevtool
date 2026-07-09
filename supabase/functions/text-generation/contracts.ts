@@ -15,6 +15,7 @@ export type TextGenerationRequest = {
   moduleId?: string;
   documentId?: string;
   locale?: "pt" | "en";
+  instructions?: string;
   contextSnapshot?: string;
   messages: TextMessage[];
 };
