@@ -79,13 +79,13 @@ Completed Cloud Product Foundation:
 - local-to-cloud import, automatic sync, merge, realtime collaboration, and Storage/assets remain out of scope
 
 Current goals:
-- establish the secure AI architecture foundation
-- move future AI execution toward a secure backend boundary
+- harden the implemented secure text AI foundation
+- keep text AI execution behind the secure backend boundary
 - keep provider secrets out of frontend code
 - keep the current cloud persistence baseline stable
 - preserve local-first anonymous and Supabase-unconfigured behavior until explicit AI product decisions change it
-- prefer Supabase Edge Functions as the MVP secure AI proxy unless implementation findings prove otherwise
-- migrate text AI before image generation
+- keep Supabase Edge Functions as the MVP secure AI proxy unless implementation findings prove otherwise
+- keep the implemented text AI proxy path stable before image generation migration
 - avoid overbuilding multi-provider abstractions before the first secure provider path works
 - keep validation commands passing before handoff
 
@@ -143,6 +143,7 @@ Already extracted:
 - document suggestions
 - document message mutation helpers
 - aiMessageService
+- aiClient
 - imageGenerationService
 - projectBootstrapService
 - authSessionService
@@ -172,8 +173,8 @@ Project data remains local-only for anonymous and Supabase-unconfigured usage.
 Normalized documents, tasks, canvas, chats, settings, and assets remain future work.
 Active Supabase migrations must create only the runtime tables currently used by the app: `projects` and `project_data`.
 Signing in does not enable local-to-cloud import, automatic sync, merge, protected routes, account pages, image Storage, or image ownership migration.
-Current legacy text AI calls still go directly from the frontend to the provider through `aiMessageService`; this is the primary Secure AI Foundation migration target.
-Current legacy image generation still calls Pollinations directly through `imageGenerationService`; it should migrate after the secure text AI path and after image ownership/storage decisions are explicit.
+Text AI now flows through `aiMessageService` -> `aiClient` -> Supabase Edge Function -> provider adapter. Frontend text AI must not reintroduce provider-specific endpoints, models, headers, payload fields, or response parsing.
+Current legacy image generation still calls Pollinations directly through `imageGenerationService`; it should migrate only after the secure text AI path is hardened and after image ownership/storage decisions are explicit.
 
 ---
 
@@ -181,7 +182,7 @@ Current legacy image generation still calls Pollinations directly through `image
 
 The current priority is:
 
-→ Establish a secure AI proxy foundation while preserving the existing cloud persistence and local-first baselines.
+→ Harden the implemented secure text AI proxy foundation while preserving the existing cloud persistence and local-first baselines.
 
 The secure AI direction is documented in:
 - docs/architecture/secure-ai-foundation.md
@@ -191,12 +192,12 @@ The current repository migration strategy remains documented in:
 - docs/architecture/persistence-context.md
 
 Before future Secure AI implementation, re-check:
-- How should the frontend AI client avoid provider-specific payloads?
-- Which text AI capability should migrate first?
-- How should Supabase Auth and project/document ownership be validated?
-- How should anonymous or Supabase-unconfigured AI behavior work after direct provider calls are removed?
-- What minimal request, error, timeout, logging, and usage controls are needed for MVP?
-- How can text AI migration avoid changing editor, prompt, or persistence behavior?
+- Does new text AI code go through `aiClient` instead of provider-specific frontend calls?
+- Has the text-generation Edge Function been validated locally with Deno and Supabase CLI?
+- Has authenticated text AI been manually tested with a real Supabase session?
+- Should `contextSnapshot` and `locale` be refined for the next text AI surface?
+- Should safe AI error feedback move from minimal alerts toward inline UI?
+- How should anonymous or Supabase-unconfigured AI behavior evolve now that direct text provider calls are removed?
 
 ---
 
@@ -237,23 +238,30 @@ Future directions:
 Secure AI migration is now in scope.
 
 Current direction:
-- frontend AI calls should move toward a product-level AI client
-- the AI client should call a secure AI proxy instead of provider APIs
+- frontend text AI calls go through the product-level `aiClient`
+- the AI client calls a secure AI proxy instead of provider APIs
 - Supabase Edge Functions are the recommended MVP proxy backend unless implementation findings prove otherwise
 - provider adapters should live behind the secure proxy
 - provider secrets must never be exposed to the frontend
-- frontend code must not add new direct AI provider calls after this epic implementation begins
+- frontend code must not add or reintroduce direct text AI provider calls
 
 Migration order:
 1. document and align the secure AI boundary
 2. define the minimal frontend AI client contract
-3. migrate text AI through the secure proxy first
-4. migrate document chat before broader guide/benchmarking text surfaces when possible
+3. migrate text AI through the secure proxy first. Completed.
+4. harden text AI with Deno/Supabase validation, manual authenticated testing, `contextSnapshot`/`locale` refinement, and better inline error feedback as needed
 5. defer image generation migration until image ownership, Storage, cleanup, and HTML reference handling are explicitly designed
 
 Abstraction rule:
 - do not overbuild multi-provider abstractions before the first secure provider path works
 - add provider abstraction only where it removes real provider leakage or enables the first secure path
+
+Local Edge Function validation commands:
+
+```sh
+deno check supabase/functions/text-generation/index.ts
+supabase functions serve text-generation --env-file <edge-env-file>
+```
 
 ---
 
@@ -306,7 +314,7 @@ Current:
 8. localStorage remains active for anonymous/unconfigured users and internal project data
 9. authenticated users use Supabase for top-level project list persistence
 10. authenticated active project content uses the `project_data` JSONB blob
-11. Secure AI Foundation is planning the first secure AI proxy path
+11. text AI uses the secure Supabase Edge Function proxy path
 
 Repository migration planning is captured in:
 - docs/architecture/repository-migration-strategy.md
@@ -314,7 +322,7 @@ Secure AI planning is captured in:
 - docs/architecture/secure-ai-foundation.md
 
 Future:
-12. text AI execution through Supabase Edge Functions
+12. Deno/Supabase CLI validation and manual authenticated text AI hardening
 13. projectData split planning
 14. normalized document/task/canvas/chat persistence after product needs justify it
 15. Supabase Storage and asset metadata after image ownership, cleanup, and references are designed
@@ -410,10 +418,16 @@ Implemented Supabase foundations:
 - nullable client boundary
 - optional environment configuration
 
-Planned in Secure AI Foundation:
-- Supabase Edge Functions as the recommended MVP secure AI proxy
-- server-side provider adapters for AI providers
-- frontend AI client boundary
+Implemented in Secure AI Foundation:
+- Supabase Edge Function as the MVP secure text AI proxy
+- server-side provider adapter for the first text AI provider
+- frontend `aiClient` boundary for text AI
+
+Still planned in Secure AI Foundation:
+- local Deno/Supabase Edge Function validation
+- manual authenticated text AI testing
+- `contextSnapshot` and `locale` refinement
+- better inline AI error feedback if alerts become too disruptive
 
 Planned later:
 - normalized Postgres-backed persistence beyond `projects` and `project_data`

@@ -22,17 +22,22 @@ Frontend
 
 The frontend should own user experience and product context selection. The backend should own provider credentials, provider-specific request construction, access checks, abuse controls, and provider error normalization.
 
-## Current AI Risks
+## Current AI State and Risks
 
-Current text AI calls are not secure enough for production use:
+Text AI has been migrated to the secure proxy path:
 
-- `src/services/ai/aiMessageService.ts` calls Anthropic directly from the frontend.
-- Provider URL, model, request shape, and response parsing live in frontend code.
-- Provider secrets cannot be safely added to the frontend bundle.
-- The frontend currently builds provider-shaped payloads.
+- frontend text call sites delegate to `src/services/ai/aiMessageService.ts`;
+- `aiMessageService` is now a compatibility/orchestration layer, not a provider transport;
+- `src/services/ai/aiClient.ts` is the frontend transport boundary for text generation;
+- `aiClient` invokes the `text-generation` Supabase Edge Function;
+- Anthropic request construction, model selection, response parsing, and credentials are isolated server-side behind the provider adapter.
+
+Remaining text AI risks:
+
 - AI prompts are embedded in UI components, especially `src/GameDesignTool.tsx`.
 - AI responses are rendered as HTML after markdown conversion, so output handling must remain conservative.
-- Request state is not consistently scoped to a document or capability.
+- `contextSnapshot` and `locale` usage still need refinement across frontend call sites.
+- Deno/Supabase CLI validation has not been run in this environment and remains required locally.
 
 Current image generation has a separate risk profile:
 
@@ -46,7 +51,7 @@ Use a narrow frontend AI client that calls a secure AI proxy.
 
 For the MVP, the recommended secure proxy backend is Supabase Edge Functions.
 
-The first secure provider path should focus on text AI. Image generation should migrate later because secure image generation also needs asset ownership, Storage policy, generated-file cleanup, and HTML/reference handling.
+The first secure provider path is implemented for text AI. Image generation should migrate later because secure image generation also needs asset ownership, Storage policy, generated-file cleanup, and HTML/reference handling.
 
 ## Why Supabase Edge Functions for MVP
 
@@ -162,6 +167,11 @@ The frontend AI client should expose product-level operations rather than provid
 Initial Edge Function:
 
 - `supabase/functions/text-generation`
+
+Implemented frontend text boundary:
+
+- `src/services/ai/aiClient.ts`: invokes the Edge Function and normalizes transport failures;
+- `src/services/ai/aiMessageService.ts`: preserves the existing frontend service API shape while delegating transport to `aiClient`.
 
 Initial text request shape:
 
@@ -310,10 +320,11 @@ Complex billing and enterprise-grade rate limiting are not part of this epic.
 4. Create the secure text AI proxy.
 5. Add a provider adapter for the first text provider.
 6. Migrate `aiMessageService` call path to the AI client/proxy without changing UI behavior.
-7. Validate authenticated text AI for document chat first.
-8. Migrate remaining text AI surfaces: guide chats, benchmarking, concept generation.
+7. Migrate document chat, guide chats, benchmarking, and concept generation through the secure text path.
+8. Validate authenticated text AI manually with a real Supabase session and Edge Function environment.
 9. Reassess anonymous/local AI behavior explicitly.
-10. Plan image generation migration separately, including Storage and asset ownership.
+10. Refine `contextSnapshot`, `locale`, and inline error handling after the secure text path is stable.
+11. Plan image generation migration separately, including Storage and asset ownership.
 
 ## Remaining Risks
 
@@ -323,4 +334,5 @@ Complex billing and enterprise-grade rate limiting are not part of this epic.
 - Markdown-to-HTML rendering must remain conservative.
 - Anonymous AI behavior is not yet decided.
 - Edge Function runtime constraints may affect provider SDK usage.
+- Local Deno/Supabase CLI validation is still required before treating the Edge Function runtime as fully verified.
 - Image generation security depends on future Storage and asset ownership design.
