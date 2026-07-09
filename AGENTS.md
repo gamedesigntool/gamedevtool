@@ -120,6 +120,7 @@ The following documents are the current source of truth:
 - docs/architecture/persistence-context.md
 - docs/architecture/repository-migration-strategy.md
 - docs/architecture/secure-ai-foundation.md
+- docs/architecture/secure-ai-validation.md
 - docs/architecture/supabase-readiness.md
 - docs/architecture/supabase-schema-v1.sql
 

@@ -253,6 +253,10 @@ Expectations:
 
 ## Edge Function Validation
 
+Detailed validation guidance is documented in:
+
+- `docs/architecture/secure-ai-validation.md`
+
 The text-generation Edge Function should be validated with Deno before handoff when the local toolchain provides it:
 
 ```sh
